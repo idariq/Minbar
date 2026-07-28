@@ -136,39 +136,44 @@ function agihKosong() {
 }
 // Kira slot permulaan tiap agihan + set slot "covered" (peruntukan asli sahaja,
 // TIDAK termasuk anjakan extension — slot anjakan funded dari saguhati yang dipindah, bukan agihan terus)
+// Nota: eligibleFlat mesti sudah TIDAK termasuk slot Tangguh + "Tiada Pengganti" (caller kena tapis
+// dahulu) — slot itu tak pernah dibayar, jadi tak patut makan bajet langsung. Baki yang tak habis
+// dibelanjakan satu agihan terus bawa (cumulative) ke agihan seterusnya dalam bulan yang sama; hanya
+// baki selepas agihan TERAKHIR yang jadi "Lebihan" sebenar (dibawa ke bulan depan) — rujuk sisaSelepas.
 function hitungAgihanInfo(agihanArr, eligibleFlat, bakiLaluTotal) {
-  const permulaan = [], covered = new Set(), kumIsi = []
-  if (!agihanArr.length || !eligibleFlat.length) return { permulaan: agihanArr.map(() => null), covered, kumIsi: agihanArr.map(() => 0) }
-  let cursor = 0
+  const permulaan = [], covered = new Set(), kumIsi = [], sisaSelepas = []
+  if (!agihanArr.length || !eligibleFlat.length) return { permulaan: agihanArr.map(() => null), covered, kumIsi: agihanArr.map(() => 0), sisaSelepas: agihanArr.map(() => 0) }
+  let cursor = 0, carry = bakiLaluTotal
   for (let i = 0; i < agihanArr.length; i++) {
-    const budget = (agihanArr[i].jumlah || 0) + (i === 0 ? bakiLaluTotal : 0)
-    let kum = 0, lastCovered = cursor - 1, nTangguhLain = 0
+    const budgetMasuk = carry
+    const budget = (agihanArr[i].jumlah || 0) + carry
+    let kum = 0, lastCovered = cursor - 1
     for (let j = cursor; j < eligibleFlat.length; j++) {
       const cost = (eligibleFlat[j].kadar || 0) + (eligibleFlat[j].sarapan || 0)
       if (kum + cost <= budget) {
         kum += cost; lastCovered = j
         covered.add(eligibleFlat[j].id)
-        // Hanya bukan-Subuh tangguh yang extend cursor (Subuh anjak ke Subuh berikutnya, bukan slot kronologi)
-        if (eligibleFlat[j].status === "Tangguh" && eligibleFlat[j].ganti === "Tiada Pengganti" && eligibleFlat[j].waktu !== "Subuh") nTangguhLain++
       } else break
     }
-    // Agihan[0] + baki lalu: permulaan = slot pertama yang dibayar oleh wang agihan sendiri
-    // (baki lalu menanggung slot-slot awal; agihan mula berbelanja selepas baki habis)
-    if (i === 0 && bakiLaluTotal > 0) {
-      let kumBaki = 0, firstAgihanSlot = null
+    // permulaan = slot pertama yang dibayar oleh wang agihan INI sendiri (bukan baki/carry
+    // yang dibawa masuk dari agihan sebelum ini — carry tu menanggung slot-slot awal dahulu)
+    if (budgetMasuk > 0) {
+      let kumCarry = 0, firstOwnSlot = null
       for (let j = cursor; j <= lastCovered; j++) {
         const cost = (eligibleFlat[j].kadar || 0) + (eligibleFlat[j].sarapan || 0)
-        if (kumBaki + cost > bakiLaluTotal) { firstAgihanSlot = eligibleFlat[j]; break }
-        kumBaki += cost
+        if (kumCarry + cost > budgetMasuk) { firstOwnSlot = eligibleFlat[j]; break }
+        kumCarry += cost
       }
-      permulaan.push(firstAgihanSlot ?? (lastCovered >= cursor ? eligibleFlat[cursor] : null))
+      permulaan.push(firstOwnSlot ?? (lastCovered >= cursor ? eligibleFlat[cursor] : null))
     } else {
       permulaan.push(cursor < eligibleFlat.length ? eligibleFlat[cursor] : null)
     }
     kumIsi.push(kum)   // jumlah kos slot yang benar-benar diisi oleh agihan ini (untuk kira lebihan)
-    cursor = lastCovered + 1 + nTangguhLain
+    carry = budget - kum
+    sisaSelepas.push(carry)
+    cursor = lastCovered + 1
   }
-  return { permulaan, covered, kumIsi }
+  return { permulaan, covered, kumIsi, sisaSelepas }
 }
 // Pecahkan baki bulan lalu kepada 2 komponen berasingan:
 //  - selainTotal: baki "Selain Subuh" (RM100/slot) — extend bajet agihan 1 secara berurutan
@@ -2104,7 +2109,8 @@ export default function BiroPendidikan({ onKembali = () => {}, onSetBack }) {
     const sorted = eligibleFlat.filter(s => s.waktu === "Subuh")
     return new Set(sorted.slice(0, _pb.subuhSlot).map(s => s.id))
   })()
-  const eligibleFlatForSeq = eligibleFlat.filter(s => !_earmarkSubuhFlat.has(s.id))
+  // Tangguh + Tiada Pengganti tak pernah dibayar — jangan biar ia makan bajet agihan
+  const eligibleFlatForSeq = eligibleFlat.filter(s => !_earmarkSubuhFlat.has(s.id) && !(s.status === "Tangguh" && s.ganti === "Tiada Pengganti"))
   const { permulaan: slotPermulaan } = data ? hitungAgihanInfo(data.agihan || [], eligibleFlatForSeq, bakiBudgetLalu) : { permulaan: [] }
   const totalDibayar = semuaSlot.reduce((a, s) => s.sebenar ? a + (s.kadar || 0) + (s.sarapan || 0) : a, 0)
   const totalGanjak = semuaSlot.filter(s => s.status === "Tangguh" && s.kadar > 0 && !s.ditangguhJadual).reduce((a, s) => a + s.kadar + s.sarapan, 0)
@@ -2192,13 +2198,13 @@ export default function BiroPendidikan({ onKembali = () => {}, onSetBack }) {
 
       // Kecualikan slot earmark Subuh dari jujukan agihan — elak pengiraan berganda
       // (jika tidak dikecualikan, agihan 2 akan "bayar" slot Subuh DAN baki juga bayar → agihan 2 lebih singkat)
-      const eligibleForSeq = eligibleSorted.filter(s => !bakiSubuhIds.has(s.id))
-      const { permulaan: slotPermulaanPdf, covered: coveredSeq, kumIsi: kumIsiPdf } = hitungAgihanInfo(data.agihan || [], eligibleForSeq, pb.selainTotal)
-      // Lebihan setiap agihan = bajet − kos slot yang benar-benar diisi (over-allocation, dibawa ke bulan depan)
-      const surplusAgihan = (data.agihan || []).map((a, i) => {
-        const budget = (a.jumlah || 0) + (i === 0 ? pb.selainTotal : 0)
-        return Math.max(0, budget - (kumIsiPdf[i] || 0))
-      })
+      // Tangguh + Tiada Pengganti tak pernah dibayar — jangan biar ia makan bajet agihan
+      const eligibleForSeq = eligibleSorted.filter(s => !bakiSubuhIds.has(s.id) && !(s.status === "Tangguh" && s.ganti === "Tiada Pengganti"))
+      const { permulaan: slotPermulaanPdf, covered: coveredSeq, kumIsi: kumIsiPdf, sisaSelepas: sisaSelepasPdf } = hitungAgihanInfo(data.agihan || [], eligibleForSeq, pb.selainTotal)
+      // Baki yang tak habis dibelanjakan satu agihan bawa terus (cumulative) ke agihan seterusnya —
+      // jadi hanya baki SELEPAS AGIHAN TERAKHIR yang jadi "Lebihan" sebenar (dibawa ke bulan depan)
+      const surplusAgihan = (data.agihan || []).map((_, i) =>
+        i === (data.agihan || []).length - 1 ? Math.max(0, sisaSelepasPdf[i] || 0) : 0)
       const getAgihanLabel = (a, idx) => {
         const sp = slotPermulaanPdf[idx]
         return sp ? `${formatTarikh(sp.tarikh)||sp.tarikh} ${sp.hari} ${sp.waktu}` : "—"
