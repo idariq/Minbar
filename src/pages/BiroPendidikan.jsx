@@ -125,7 +125,7 @@ function slotKosong() {
     id: crypto.randomUUID(), tarikh: "", hari: "Isnin", waktu: "Maghrib", jenisProgram: "",
     pengisian: "", penceramah: "", kadar: 100, sarapan: 0,
     status: "", ganti: "", sebenar: false, dariGanjak: false, muslimat: false, ditangguhJadual: false,
-    programRasmi: false, notaProgram: "", kewanganSahaja: false, anjakanKe: "", anjakanDari: ""
+    programRasmi: false, notaProgram: "", kewanganSahaja: false, anjakanKe: "", anjakanDari: "", solatTasbih: false
   }
 }
 function mingguKosong(n) {
@@ -1539,9 +1539,11 @@ export default function BiroPendidikan({ onKembali = () => {}, onSetBack }) {
       const masaExtra = masaLines.length > 1 ? masaLineH : 0
 
       // Row baselines — bring the three details closer together
+      const adaTasbih = !!slot.solatTasbih
       const tarikhY = evStartY
       const masaY   = tarikhY + evGap
-      const lokasiY = masaY + masaExtra + evGap
+      const tasbihY = masaY + masaExtra + evGap
+      const lokasiY = adaTasbih ? tasbihY + evGap : masaY + masaExtra + evGap
       const lastEvY = lokasiY
 
       // Dark gradient panel sized to actual content
@@ -1573,6 +1575,10 @@ export default function BiroPendidikan({ onKembali = () => {}, onSetBack }) {
       withIcon(calIcon, 46, tarikhStr, RCX, tarikhY, "700 42px 'Playfair Display'", "#ffffff")
       if (masaLines.length > 1) iconTextRows(clockIcon, 35, masaLines, RCX, masaY, masaFont, "rgba(255,255,255,0.88)", masaLineH)
       else withIcon(clockIcon, 35, masaLines[0], RCX, masaY, masaFont, "rgba(255,255,255,0.88)")
+      if (adaTasbih) {
+        ctx.fillStyle = goldRgba(0.92); ctx.font = "italic 700 24px Lato"; ctx.textAlign = "center"
+        ctx.fillText("✦ Didahului Solat Sunat Tasbih ✦", RCX, tasbihY)
+      }
       withIcon(pinIcon, 32, data?.masjid || "Masjid Parit Setongkat", RCX, lokasiY, "700 32px Lato", goldRgba(0.98))
       ctx.restore()
 
@@ -1645,12 +1651,20 @@ export default function BiroPendidikan({ onKembali = () => {}, onSetBack }) {
       if (nLine) { ctx.fillStyle = "#ffffff"; ctx.font = `700 ${nf}px 'Playfair Display'`; ctx.fillText(nLine, CX, nY) }
 
       const detailsTopY = nY + 42
+      const adaTasbih = !!slot.solatTasbih
       ornLine(detailsTopY, 80, W - 80)
       withIcon(calIcon, 46, tarikhStr, CX, detailsTopY + 58, "700 44px 'Playfair Display'", "#ffffff")
       withIcon(clockIcon, 33, masaStr, CX, detailsTopY + 102, "300 36px Lato", "rgba(255,255,255,0.80)")
-      withIcon(pinIcon, 31, data?.masjid || "Masjid Parit Setongkat", CX, detailsTopY + 138, "italic 700 34px Lato", goldRgba(0.96))
+      if (adaTasbih) {
+        ctx.save()
+        ctx.shadowColor = "rgba(0,0,0,0.9)"; ctx.shadowBlur = 10; ctx.shadowOffsetY = 2
+        ctx.fillStyle = goldRgba(0.92); ctx.font = "italic 700 26px Lato"; ctx.textAlign = "center"
+        ctx.fillText("✦ Didahului Solat Sunat Tasbih ✦", CX, detailsTopY + 138)
+        ctx.restore()
+      }
+      withIcon(pinIcon, 31, data?.masjid || "Masjid Parit Setongkat", CX, detailsTopY + (adaTasbih ? 174 : 138), "italic 700 34px Lato", goldRgba(0.96))
 
-      const bottomOrnY = Math.min(Math.max(detailsTopY + 170, H - 100), H - 52)
+      const bottomOrnY = Math.min(Math.max(detailsTopY + (adaTasbih ? 206 : 170), H - 100), H - 52)
       ornLine(bottomOrnY, 80, W - 80)
       ctx.fillStyle = "rgba(255,255,255,0.28)"; ctx.font = "italic 400 18px Lato"; ctx.textAlign = "center"
       ctx.fillText("*Tertakluk kepada perubahan tanpa notis awal", CX, bottomOrnY + 38)
@@ -3786,6 +3800,10 @@ export default function BiroPendidikan({ onKembali = () => {}, onSetBack }) {
                             <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: C.txtMuted, cursor: "pointer", userSelect: "none" }}>
                               <input type="checkbox" checked={!!slot.muslimat} onChange={e => kemasSlot(mIdx, slot.id, "muslimat", e.target.checked)} style={{ width: 14, height: 14 }} />
                               Tiada Saguhati
+                            </label>
+                            <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: C.txtMuted, cursor: "pointer", userSelect: "none" }}>
+                              <input type="checkbox" checked={!!slot.solatTasbih} onChange={e => kemasSlot(mIdx, slot.id, "solatTasbih", e.target.checked)} style={{ width: 14, height: 14 }} />
+                              Ada Solat Tasbih Sebelum Kuliah
                             </label>
 
                             <div style={{ borderTop: `1px dashed ${C.border}`, paddingTop: 8 }}>
