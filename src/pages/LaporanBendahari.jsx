@@ -130,6 +130,9 @@ export default function LaporanBendahari({ token, onAdminLogin, hideFab = false 
 
       // Compute anjakan links locally so PDF reflects tangguh status without requiring "Kira Anjakan Auto"
       const anjakanMap = new Map()
+      // slot Tangguh (id) -> slot gantian sebenar (objek) — untuk atribut kos gantian kepada
+      // agihan ASAL tangguh tu (bukan agihan yang aktif pada tarikh gantian sebenar berlaku)
+      const tangguhGantianSlot = new Map()
       {
         const _pbA = pecahBaki(data.bakiLalu)
         const flatAllA = []
@@ -163,6 +166,7 @@ export default function LaporanBendahari({ token, onAdminLogin, hideFab = false 
             const cs = flatA[extC].s
             anjakanMap.set(ts.id, { anjakanKe: `${formatTarikh(cs.tarikh)} ${cs.hari} ${cs.waktu}` })
             anjakanMap.set(cs.id, { anjakanDari: `${formatTarikh(ts.tarikh)} ${ts.hari} ${ts.waktu}` })
+            tangguhGantianSlot.set(ts.id, cs)
             extC++
           }
           let sCari = idxA + 1
@@ -172,6 +176,7 @@ export default function LaporanBendahari({ token, onAdminLogin, hideFab = false 
                 const cs = flatA[j].s
                 anjakanMap.set(ts.id, { anjakanKe: `${formatTarikh(cs.tarikh)} ${cs.hari} ${cs.waktu}` })
                 anjakanMap.set(cs.id, { anjakanDari: `${formatTarikh(ts.tarikh)} ${ts.hari} ${ts.waktu}` })
+                tangguhGantianSlot.set(ts.id, cs)
                 sCari = j + 1; break
               }
             }
@@ -193,8 +198,27 @@ export default function LaporanBendahari({ token, onAdminLogin, hideFab = false 
       const bakiSubuhIds = new Set(
         slotLaporanSorted.filter(s => s.waktu === "Subuh").slice(0, pb.subuhSlot).map(s => s.id)
       )
-      // Tangguh + Tiada Pengganti tak pernah dibayar — jangan biar ia makan bajet agihan
-      const eligibleForSeq = eligibleSorted.filter(s => !bakiSubuhIds.has(s.id) && !(s.status === "Tangguh" && s.ganti === "Tiada Pengganti"))
+      // Tangguh + Tiada Pengganti tak pernah dibayar — jangan biar ia makan bajet agihan. Tapi kos
+      // gantian sebenar (anjakan) MESTI tetap dibayar — atribut kepada agihan yang aktif pada tarikh
+      // tangguh ASAL (bukan tarikh gantian sebenar berlaku), dengan letak "proksi" kos gantian pada
+      // kedudukan kronologi slot tangguh tu, dan buang slot gantian dari kedudukan sebenarnya supaya
+      // tidak dikira dua kali.
+      const gantianIds = new Set([...tangguhGantianSlot.values()].map(g => g.id))
+      // proksi (id gantian) -> id tangguh asal — untuk kembalikan label "Agihan bermula"/pemisah
+      // jadual ke kedudukan kronologi tangguh yang betul, bukan kedudukan gantian yang lewat
+      const proksiIdKeTangguhId = new Map()
+      const eligibleForSeq = eligibleSorted
+        .filter(s => !bakiSubuhIds.has(s.id) && !gantianIds.has(s.id))
+        .map(s => {
+          if (s.status !== "Tangguh" || s.ganti !== "Tiada Pengganti") return s
+          const gantian = tangguhGantianSlot.get(s.id)
+          if (!gantian) return null
+          proksiIdKeTangguhId.set(gantian.id, s.id)
+          // kedudukan dalam array (untuk atribusi bajet) dah terkunci ikut tarikh tangguh asal —
+          // tapi papar tarikh/hari GANTIAN sebenar supaya label "Bermula" bermakna (sesi sebenar)
+          return { id: gantian.id, kadar: gantian.kadar, sarapan: gantian.sarapan, waktu: gantian.waktu, tarikh: gantian.tarikh, hari: gantian.hari }
+        })
+        .filter(Boolean)
       const { permulaan: slotPermulaanPdf, covered: coveredSeq, kumIsi: kumIsiPdf, sisaSelepas: sisaSelepasPdf } = hitungAgihanInfo(data.agihan || [], eligibleForSeq, pb.selainTotal)
       // Baki yang tak habis dibelanjakan satu agihan bawa terus (cumulative) ke agihan seterusnya —
       // jadi hanya baki SELEPAS AGIHAN TERAKHIR yang jadi "Lebihan" sebenar (dibawa ke bulan depan)
@@ -324,7 +348,7 @@ export default function LaporanBendahari({ token, onAdminLogin, hideFab = false 
 
       // Insert agihan separator rows
       const slotToPeriIdx = new Map()
-      slotPermulaanPdf.forEach((s, idx) => { if (s?.id) slotToPeriIdx.set(s.id, idx) })
+      slotPermulaanPdf.forEach((s, idx) => { if (s?.id) slotToPeriIdx.set(proksiIdKeTangguhId.get(s.id) || s.id, idx) })
       const tableRowsWithSep = [], rowSlotMap = new Map()
       let tblR = 0, curGroup = -1
       const akhirGroupIdx = (data.agihan || []).length - 1
