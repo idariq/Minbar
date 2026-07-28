@@ -292,9 +292,7 @@ export default function LaporanBendahari({ token, onAdminLogin, hideFab = false 
         const _sebenar = s.sebenar && (s.status === "Hadir" || s.status === "Ganti")
         const dibayar = _sebenar ? (s.kadar||0) + (s.sarapan||0) : 0
         const pengRingkas = s.pengisian ? s.pengisian.split(" – ")[0] : "—"
-        const isMuslimat = s.pengisian && (s.pengisian.includes("Jenazah") || s.pengisian.includes("Tahsin"))
-        const _perinciStatus = isMuslimat ? "Pegawai JAINJ"
-          : s.ganti && s.ganti !== "Tiada Pengganti" ? namaPendek(s.ganti)
+        const _perinciStatus = s.ganti && s.ganti !== "Tiada Pengganti" ? namaPendek(s.ganti)
           : s.status === "Tangguh" ? "Tiada Pengganti"
           : "—"
         const _nota = []
