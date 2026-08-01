@@ -1981,7 +1981,8 @@ export default function BiroPendidikan({ onKembali = () => {}, onSetBack }) {
     botG.addColorStop(0, "rgba(201,162,39,0)"); botG.addColorStop(0.5, "rgba(201,162,39,0.38)"); botG.addColorStop(1, "rgba(201,162,39,0)")
     ctx.fillStyle = botG; ctx.fillRect(0, CH - 5, CW, 5)
 
-    const filename = `kad-penceramah-${namaPenceramah.toLowerCase().replace(/\s+/g, "-")}.png`
+    const bulanSlug = `${BNAM[parseInt(tM)] || ""}-${tY || ""}`.toLowerCase().replace(/^-+|-+$/g, "")
+    const filename = `kad-penceramah-${namaPenceramah.toLowerCase().replace(/\s+/g, "-")}${bulanSlug ? `-${bulanSlug}` : ""}.png`
     const bulanLabel = `${BNAM[parseInt(tM)] || ""} ${tY || ""}`.trim()
     setPratontonPoster({ dataUrl: canvas.toDataURL("image/png"), filename, isKad: true, namaPenceramah, noTel: pObj?.no_tel || "", bulanLabel, takwimLabel })
   }
