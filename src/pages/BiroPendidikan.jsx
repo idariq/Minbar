@@ -1678,7 +1678,10 @@ export default function BiroPendidikan({ onKembali = () => {}, onSetBack }) {
     // ── Preview (bukan terus muat turun) ──
     const namaProgram = getNamaProgram(slot)
     const penceramahNama = slot.penceramah || ""
-    const filename = `${namaProgram} (${slot.hari || ""}, Minggu ${mingguKe}) - ${penceramahNama}.png`.replace(/\s+/g, " ").trim()
+    const BNAM_FN = ["","Januari","Februari","Mac","April","Mei","Jun","Julai","Ogos","September","Oktober","November","Disember"]
+    const [fnY, fnM] = (bulanAktif?.bulan || "").split("-")
+    const bulanLabelFn = `${BNAM_FN[parseInt(fnM)] || ""} ${fnY || ""}`.trim()
+    const filename = `${namaProgram} (${slot.hari || ""}, Minggu ${mingguKe}) - ${penceramahNama}${bulanLabelFn ? ` - ${bulanLabelFn}` : ""}.png`.replace(/\s+/g, " ").trim()
     setPratontonPoster({ dataUrl: canvas.toDataURL("image/png"), filename })
   }
 
