@@ -1338,23 +1338,35 @@ export default function BiroPendidikan({ onKembali = () => {}, onSetBack }) {
       }
     }
     const hasKitab = kitabStr.length > 0
-    let kf = 36
+    let kf = 36, kitabLines = []
     if (hasKitab) {
-      ctx.font = `italic 400 ${kf}px Lato`
-      while (ctx.measureText(kitabStr).width > maxTopikW && kf > 26) { kf -= 2; ctx.font = `italic 400 ${kf}px Lato` }
+      const buildKitabLines = () => {
+        ctx.font = `italic 400 ${kf}px Lato`
+        let line = "", lines = []
+        for (const w of kitabStr.split(" ")) {
+          const test = line ? line + " " + w : w
+          if (ctx.measureText(test).width > maxTopikW) { if (line) lines.push(line); line = w } else line = test
+        }
+        if (line) lines.push(line)
+        return lines.slice(0, 2)
+      }
+      kitabLines = buildKitabLines()
+      while (kf > 22 && kitabLines.some(l => ctx.measureText(l).width > maxTopikW)) { kf -= 2; kitabLines = buildKitabLines() }
     }
+    const kitabLineH = kf + 6
+    const kitabExtra = hasKitab ? (kitabLines.length - 1) * kitabLineH : 0
     // Majlis besar needs extra room so "— TAJUK —" label clears the ornament line
     const mbGap = isMajlisBesar ? 52 : 0
     const orn2Y = topicLines.length === 0 ? orn1Y + 54
                 : topicLines.length === 1 && !hasKitab ? orn1Y + 92 + mbGap
-                : topicLines.length === 1 ?  orn1Y + 130 + mbGap
+                : topicLines.length === 1 ?  orn1Y + 130 + mbGap + kitabExtra
                 : !hasKitab ?                orn1Y + 115 + mbGap
-                :                            orn1Y + 162 + mbGap
+                :                            orn1Y + 162 + mbGap + kitabExtra
     if (topicLines.length > 0 && !isMajlisBesar) {
       const lineGap = tf + 10
       const kitabGap = hasKitab ? kf + 14 : 0
       const topikSpan = (topicLines.length - 1) * lineGap
-      const totalH = topikSpan + tf + kitabGap
+      const totalH = topikSpan + tf + kitabGap + kitabExtra
       const ty0 = Math.round((orn1Y + orn2Y) / 2 - totalH / 2 + tf * 0.82)
 
       // Majlis besar: "TAJUK" label above topic — large gold, clearly visible
@@ -1376,7 +1388,7 @@ export default function BiroPendidikan({ onKembali = () => {}, onSetBack }) {
       }
       if (hasKitab) {
         ctx.font = `italic 400 ${kf}px Lato`; ctx.fillStyle = goldRgba(0.92)
-        ctx.fillText(kitabStr, CX, ty0 + topikSpan + kitabGap)
+        kitabLines.forEach((ln, i) => ctx.fillText(ln, CX, ty0 + topikSpan + kitabGap + i * kitabLineH))
       }
       ctx.shadowColor = "transparent"; ctx.shadowBlur = 0; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0
     }
@@ -1502,11 +1514,22 @@ export default function BiroPendidikan({ onKembali = () => {}, onSetBack }) {
         rTopLines = buildRL()
         while (rtf > 28 && rTopLines.some(l => ctx.measureText(l).width > maxRTopW)) { rtf -= 4; rTopLines = buildRL() }
       }
-      let rkf = Math.min(kf, 30)
+      let rkf = Math.min(kf, 30), rKitabLines = []
       if (hasKitab) {
-        ctx.font = `italic 400 ${rkf}px Lato`
-        while (ctx.measureText(kitabStr).width > maxRTopW && rkf > 18) { rkf -= 2; ctx.font = `italic 400 ${rkf}px Lato` }
+        const buildRKL = () => {
+          ctx.font = `italic 400 ${rkf}px Lato`
+          let rl = "", rll = []
+          for (const w of kitabStr.split(" ")) {
+            const t2 = rl ? rl + " " + w : w
+            if (ctx.measureText(t2).width > maxRTopW) { if (rl) rll.push(rl); rl = w } else rl = t2
+          }
+          if (rl) rll.push(rl)
+          return rll.slice(0, 2)
+        }
+        rKitabLines = buildRKL()
+        while (rkf > 18 && rKitabLines.some(l => ctx.measureText(l).width > maxRTopW)) { rkf -= 2; rKitabLines = buildRKL() }
       }
+      const rKitabLineH = rkf + 6
 
       let rtY = rightTop + 22 + 28
       if (rTopLines.length > 0) {
@@ -1522,15 +1545,15 @@ export default function BiroPendidikan({ onKembali = () => {}, onSetBack }) {
         if (hasKitab) {
           const kitabY = rtY + rtf + (rTopLines.length - 1) * rGap + rkf + 12
           ctx.font = `italic 400 ${rkf}px Lato`; ctx.fillStyle = goldRgba(0.92); ctx.textAlign = "center"
-          ctx.fillText(kitabStr, RCX, kitabY)
-          rtY = kitabY
+          rKitabLines.forEach((ln, i) => ctx.fillText(ln, RCX, kitabY + i * rKitabLineH))
+          rtY = kitabY + (rKitabLines.length - 1) * rKitabLineH
         } else {
           rtY = rtY + rtf + (rTopLines.length - 1) * rGap
         }
       } else if (hasKitab) {
         ctx.font = `italic 400 ${rkf}px Lato`; ctx.fillStyle = goldRgba(0.92); ctx.textAlign = "center"
-        ctx.fillText(kitabStr, RCX, rtY + rkf)
-        rtY = rtY + rkf
+        rKitabLines.forEach((ln, i) => ctx.fillText(ln, RCX, rtY + rkf + i * rKitabLineH))
+        rtY = rtY + rkf + (rKitabLines.length - 1) * rKitabLineH
       }
 
       // Thin ornament line (right side only)
