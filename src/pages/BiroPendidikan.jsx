@@ -6,7 +6,7 @@ import {
   ChevronDown, ChevronRight, Printer, Plus, Trash2,
   Users, Calendar, X, Check, MoreVertical, Download,
   BookOpen, ArrowLeft, Zap, FileText, Wallet, Star,
-  LayoutList, RotateCcw, Upload, LogOut, Eye, EyeOff
+  LayoutList, RotateCcw, Upload, LogOut, Eye, EyeOff, Settings
 } from "lucide-react"
 import LaporanBendahari from "./LaporanBendahari.jsx"
 
@@ -83,6 +83,7 @@ const KITAB_SEDIA_ADA = [
 
 const STATUS_OPTS = ["", "Hadir", "Ganti", "Tangguh"]
 const WAKTU_OPTS = ["Subuh", "Duha", "Asar", "Jumaat", "Maghrib", "Isyak"]
+const WAKTU_MASA_DEFAULT = { Subuh: "Selepas Solat Subuh", Duha: "9.00 pagi – 10.30 pagi", Asar: "Selepas Solat Asar", Maghrib: "Selepas Solat Maghrib", Isyak: "Selepas Solat Isyak", Jumaat: "12.30 tengah hari hingga masuk waktu Jumaat" }
 const PROGRAM_OPTS = [
   "Kuliah Subuh","Kuliah Duha","Kuliah Asar","Kuliah Maghrib","Kuliah Isyak",
   "Tazkirah Jumaat","Kelas Muslimat","Majlis Zikir","Kelas Pegawai",
@@ -122,7 +123,7 @@ function getPosterTheme(slot) {
 
 function slotKosong() {
   return {
-    id: crypto.randomUUID(), tarikh: "", hari: "Isnin", waktu: "Maghrib", jenisProgram: "",
+    id: crypto.randomUUID(), tarikh: "", hari: "Isnin", waktu: "Maghrib", jenisProgram: "", masaKustom: "",
     pengisian: "", penceramah: "", kadar: 100, sarapan: 0,
     status: "", ganti: "", sebenar: false, dariGanjak: false, muslimat: false, ditangguhJadual: false,
     programRasmi: false, notaProgram: "", kewanganSahaja: false, anjakanKe: "", anjakanDari: "", solatTasbih: false
@@ -510,6 +511,11 @@ export default function BiroPendidikan({ onKembali = () => {}, onSetBack }) {
     catch { return migrasiTemplat(TEMPLATE_JADUAL.map(g => ({ ...g, minggu: g.minggu.map(m => ({ ...m })) }))) }
   })
   const [templatUbah, setTemplatUbah] = useState(false)
+  const [masaWaktu, setMasaWaktu] = useState(() => {
+    try { const s = localStorage.getItem("alc_biro_masa_waktu"); return { ...WAKTU_MASA_DEFAULT, ...(s ? JSON.parse(s) : {}) } }
+    catch { return { ...WAKTU_MASA_DEFAULT } }
+  })
+  const [modalTetapanMasa, setModalTetapanMasa] = useState(false)
   const [copiedSlotId, setCopiedSlotId] = useState(null)
   const [gambarUploadLoading, setGambarUploadLoading] = useState(null)
   const [bendahariLink, setBendahariLink] = useState("")
@@ -671,6 +677,14 @@ export default function BiroPendidikan({ onKembali = () => {}, onSetBack }) {
     kemas(d => { const s = d.minggu[mIdx].slots.find(s => s.id === id); if (s) s[field] = val })
   }
 
+  function kemasMasaWaktu(waktu, val) {
+    setMasaWaktu(prev => {
+      const next = { ...prev, [waktu]: val }
+      try { localStorage.setItem("alc_biro_masa_waktu", JSON.stringify(next)) } catch {}
+      return next
+    })
+  }
+
   function autoAnjakan() {
     kemas(d => {
       const _pbA = pecahBaki(d.bakiLalu)
@@ -763,7 +777,7 @@ export default function BiroPendidikan({ onKembali = () => {}, onSetBack }) {
     const hari = slot.hari || ""
     const waktu = slot.waktu || ""
     const mingguKe = dt ? Math.ceil(dt.getDate() / 7) : 1
-    const masa = { Subuh:"Selepas Solat Subuh", Duha:"9.00 pagi – 10.30 pagi", Asar:"Selepas Solat Asar", Maghrib:"Selepas Solat Maghrib", Isyak:"Selepas Solat Isyak", Jumaat:"12.30 tengah hari hingga masuk waktu Jumaat" }[waktu] || ""
+    const masa = slot.masaKustom || masaWaktu[waktu] || ""
     const salam = "السَّلَامُ عَلَيْكُمْ وَرَحْمَةُ اللّٰهِ وَبَرَكَاتُهُ\n\n"
 
     if (slot.jenisProgram === "Kelas Muslimat") return `${salam}👩 *KELAS MUSLIMAT*\n\n🗓 *${hari} | ${tarikhStr}*\n⏰ \`${masa}\`\n📍 *${masjid}*\n\n🎙 *Pengajar:*\n${prefix}${penceramah}\n\n📖 *Pengisian:*\n${pengisian}\n\n✨ Muslimat dijemput hadir bersama-sama mengimarahkan majlis ilmu 🤲`
@@ -771,16 +785,16 @@ export default function BiroPendidikan({ onKembali = () => {}, onSetBack }) {
     const isZikir = slot.jenisProgram === "Majlis Zikir" || (waktu === "Maghrib" && hari === "Rabu" && mingguKe === 3) || (waktu === "Duha" && hari === "Selasa")
     if (isZikir) return `${salam}📿 *MAJLIS ZIKIR*\n\n🗓 *${hari} | ${tarikhStr}*\n⏰ \`${masa}\`\n📍 *${masjid}*\n\n🎙 *Dipimpin oleh:*\n${prefix}${penceramah}\n\n📖 *Pengisian:*\n${pengisian}\n\n✨ Muslimin dan Muslimat dijemput hadir bersama-sama mengimarahkan majlis zikir ini 🤲`
 
-    if (waktu === "Subuh") return `${salam}📘 *KULIAH SUBUH*\n\n🗓 *${hari} | ${tarikhStr}*\n⏰ \`Selepas Solat Subuh\`\n📍 *${masjid}*\n\n🎙 *Penceramah:*\n${prefix}${penceramah}\n\n📖 *Pengisian:*\n${pengisian}\n\n✨ Jemaah dijemput hadir bersama-sama mengimarahkan majlis ilmu 🤲`
-    if (waktu === "Asar") return `${salam}🌤 *KULIAH ASAR*\n\n🗓 *${hari} | ${tarikhStr}*\n⏰ \`Selepas Solat Asar\`\n📍 *${masjid}*\n\n🎙 *Penceramah:*\n${prefix}${penceramah}\n\n📖 *Pengisian:*\n${pengisian}\n\n✨ Jemaah dijemput hadir bersama-sama mengimarahkan majlis ilmu 🤲`
-    if (waktu === "Maghrib") return `${salam}📚 *KULIAH MAGHRIB*\n\n🗓 *${hari} | ${tarikhStr}*\n⏰ \`Selepas Solat Maghrib\`\n📍 *${masjid}*\n\n🎙 *Penceramah:*\n${prefix}${penceramah}\n\n📖 *Pengisian:*\n${pengisian}\n\n✨ Jemaah dijemput hadir bersama-sama mengimarahkan majlis ilmu 🤲`
-    if (waktu === "Isyak") return `${salam}📚 *KULIAH ISYAK*\n\n🗓 *${hari} | ${tarikhStr}*\n⏰ \`Selepas Solat Isyak\`\n📍 *${masjid}*\n\n🎙 *Penceramah:*\n${prefix}${penceramah}\n\n📖 *Pengisian:*\n${pengisian}\n\n✨ Jemaah dijemput hadir bersama-sama mengimarahkan majlis ilmu 🤲`
+    if (waktu === "Subuh") return `${salam}📘 *KULIAH SUBUH*\n\n🗓 *${hari} | ${tarikhStr}*\n⏰ \`${masa}\`\n📍 *${masjid}*\n\n🎙 *Penceramah:*\n${prefix}${penceramah}\n\n📖 *Pengisian:*\n${pengisian}\n\n✨ Jemaah dijemput hadir bersama-sama mengimarahkan majlis ilmu 🤲`
+    if (waktu === "Asar") return `${salam}🌤 *KULIAH ASAR*\n\n🗓 *${hari} | ${tarikhStr}*\n⏰ \`${masa}\`\n📍 *${masjid}*\n\n🎙 *Penceramah:*\n${prefix}${penceramah}\n\n📖 *Pengisian:*\n${pengisian}\n\n✨ Jemaah dijemput hadir bersama-sama mengimarahkan majlis ilmu 🤲`
+    if (waktu === "Maghrib") return `${salam}📚 *KULIAH MAGHRIB*\n\n🗓 *${hari} | ${tarikhStr}*\n⏰ \`${masa}\`\n📍 *${masjid}*\n\n🎙 *Penceramah:*\n${prefix}${penceramah}\n\n📖 *Pengisian:*\n${pengisian}\n\n✨ Jemaah dijemput hadir bersama-sama mengimarahkan majlis ilmu 🤲`
+    if (waktu === "Isyak") return `${salam}📚 *KULIAH ISYAK*\n\n🗓 *${hari} | ${tarikhStr}*\n⏰ \`${masa}\`\n📍 *${masjid}*\n\n🎙 *Penceramah:*\n${prefix}${penceramah}\n\n📖 *Pengisian:*\n${pengisian}\n\n✨ Jemaah dijemput hadir bersama-sama mengimarahkan majlis ilmu 🤲`
     if (waktu === "Duha" && hari === "Rabu") {
-      if (mingguKe === 1 || mingguKe === 3) return `${salam}☀️ *KULIAH DUHA*\n\n🗓 *Rabu | ${tarikhStr}*\n⏰ \`9.00 pagi – 10.30 pagi\`\n📍 *${masjid}*\n\n🎙 *Penceramah:*\n${prefix}${penceramah}\n\n📖 *Pengisian:*\n${pengisian}\n\n🕋 Solat tasbih akan diadakan sebelum kuliah\n🍽 Jamuan disediakan.\n\n✨ Jemaah dijemput hadir bersama-sama mengimarahkan majlis ilmu 🤲`
-      return `${salam}☀️ *KULIAH DUHA*\n\n🗓 *Rabu | ${tarikhStr}*\n⏰ \`9.00 pagi – 10.30 pagi\`\n📍 *${masjid}*\n\n🎤 *Penceramah:*\n${prefix}${penceramah}\n\n📖 *Pengisian:*\n${pengisian}\n\n🍴 Jamuan disediakan.\n\n✨ Jemaah dijemput hadir bersama-sama mengimarahkan majlis ilmu 🤲`
+      if (mingguKe === 1 || mingguKe === 3) return `${salam}☀️ *KULIAH DUHA*\n\n🗓 *Rabu | ${tarikhStr}*\n⏰ \`${masa}\`\n📍 *${masjid}*\n\n🎙 *Penceramah:*\n${prefix}${penceramah}\n\n📖 *Pengisian:*\n${pengisian}\n\n🕋 Solat tasbih akan diadakan sebelum kuliah\n🍽 Jamuan disediakan.\n\n✨ Jemaah dijemput hadir bersama-sama mengimarahkan majlis ilmu 🤲`
+      return `${salam}☀️ *KULIAH DUHA*\n\n🗓 *Rabu | ${tarikhStr}*\n⏰ \`${masa}\`\n📍 *${masjid}*\n\n🎤 *Penceramah:*\n${prefix}${penceramah}\n\n📖 *Pengisian:*\n${pengisian}\n\n🍴 Jamuan disediakan.\n\n✨ Jemaah dijemput hadir bersama-sama mengimarahkan majlis ilmu 🤲`
     }
-    if (waktu === "Duha") return `${salam}☀️ *KULIAH DUHA*\n\n🗓 *${hari} | ${tarikhStr}*\n⏰ \`9.00 pagi – 10.30 pagi\`\n📍 *${masjid}*\n\n🎙 *Penceramah:*\n${prefix}${penceramah}\n\n📖 *Pengisian:*\n${pengisian}\n\n✨ Jemaah dijemput hadir bersama-sama mengimarahkan majlis ilmu 🤲`
-    if (waktu === "Jumaat") return `${salam}🕌 *TAZKIRAH JUMAAT*\n\n🗓 *Jumaat | ${tarikhStr}*\n⏰ \`12.30 tengah hari hingga masuk waktu Jumaat\`\n📍 *${masjid}*\n\n🎤 *Penceramah:*\n${prefix}${penceramah}\n\n📖 *Pengisian:*\n${pengisian}\n\n✨ Jemaah dijemput hadir bersama-sama mengimarahkan majlis ilmu 🤲`
+    if (waktu === "Duha") return `${salam}☀️ *KULIAH DUHA*\n\n🗓 *${hari} | ${tarikhStr}*\n⏰ \`${masa}\`\n📍 *${masjid}*\n\n🎙 *Penceramah:*\n${prefix}${penceramah}\n\n📖 *Pengisian:*\n${pengisian}\n\n✨ Jemaah dijemput hadir bersama-sama mengimarahkan majlis ilmu 🤲`
+    if (waktu === "Jumaat") return `${salam}🕌 *TAZKIRAH JUMAAT*\n\n🗓 *Jumaat | ${tarikhStr}*\n⏰ \`${masa}\`\n📍 *${masjid}*\n\n🎤 *Penceramah:*\n${prefix}${penceramah}\n\n📖 *Pengisian:*\n${pengisian}\n\n✨ Jemaah dijemput hadir bersama-sama mengimarahkan majlis ilmu 🤲`
     return ""
   }
 
@@ -1043,7 +1057,7 @@ export default function BiroPendidikan({ onKembali = () => {}, onSetBack }) {
     const iso = tarikhKeISO(slot.tarikh, bulanAktif?.bulan)
     const dt = iso ? new Date(iso + "T00:00:00") : null
     const tarikhStr = dt ? `${slot.hari||""}, ${dt.getDate()} ${BLN[dt.getMonth()]} ${dt.getFullYear()}` : (slot.tarikh || "")
-    const masaStr = slotMbd?.masa || { Subuh:"Selepas Solat Subuh", Duha:"9.00 pagi – 10.30 pagi", Asar:"Selepas Solat Asar", Maghrib:"Selepas Solat Maghrib", Isyak:"Selepas Solat Isyak", Jumaat:"12.30 tgahari – masuk waktu Jumaat" }[slot.waktu] || ""
+    const masaStr = slotMbd?.masa || slot.masaKustom || masaWaktu[slot.waktu] || ""
 
     // ── Helpers ──
     const dmd = (x, y, s, al = 1) => {
@@ -1964,8 +1978,7 @@ export default function BiroPendidikan({ onKembali = () => {}, onSetBack }) {
       }
 
       // Waktu — bottom left, soft gold
-      const WAKTU_KAD = { Subuh: "Selepas Solat Subuh", Duha: "9.00 pagi – 10.30 pagi", Asar: "Selepas Solat Asar", Maghrib: "Selepas Solat Maghrib", Isyak: "Selepas Solat Isyak", Jumaat: "12.30 tengah hari hingga masuk waktu Jumaat" }
-      const waktuLabel = WAKTU_KAD[s.waktu] || s.waktu || ""
+      const waktuLabel = s.masaKustom || masaWaktu[s.waktu] || s.waktu || ""
       if (waktuLabel) {
         let wf = 16; ctx.font = `400 ${wf}px Lato`
         while (ctx.measureText(waktuLabel).width > cardW - 32 && wf > 12) { wf--; ctx.font = `400 ${wf}px Lato` }
@@ -3667,6 +3680,9 @@ export default function BiroPendidikan({ onKembali = () => {}, onSetBack }) {
         <div style={{ fontSize: 11, fontWeight: "600", paddingRight: 8, color: simpanLoading ? C.gold : adaUbah ? C.gold : C.green }}>
           {simpanLoading ? "Menyimpan..." : adaUbah ? "● Belum simpan" : "✓ Tersimpan"}
         </div>
+        <button onClick={() => setModalTetapanMasa(true)} title="Tetapan Masa Waktu" style={{ background: "none", border: "none", cursor: "pointer", padding: "8px 10px", display: "flex", alignItems: "center", color: "white" }}>
+          <Settings size={18} />
+        </button>
       </div>
 
       {/* Tab selector */}
@@ -3777,6 +3793,10 @@ export default function BiroPendidikan({ onKembali = () => {}, onSetBack }) {
                                   {PROGRAM_OPTS.map(p => <option key={p} value={p}>{p}</option>)}
                                 </select>
                               </div>
+                            </div>
+                            <div>
+                              <div style={{ fontSize: 10, color: C.txtMuted, marginBottom: 3 }}>Masa (pilihan — kosongkan untuk guna tetapan lalai {slot.waktu})</div>
+                              <input value={slot.masaKustom || ""} onChange={e => kemasSlot(mIdx, slot.id, "masaKustom", e.target.value)} placeholder={masaWaktu[slot.waktu] || ""} style={inp} />
                             </div>
                             <div>
                               <div style={{ fontSize: 10, color: C.txtMuted, marginBottom: 3 }}>Penceramah</div>
@@ -4250,6 +4270,32 @@ export default function BiroPendidikan({ onKembali = () => {}, onSetBack }) {
                   </button>
                 ))
               })()}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tetapan Masa Waktu modal */}
+      {modalTetapanMasa && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 10000, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+          <div style={{ background: C.card, borderRadius: "16px 16px 0 0", width: "100%", maxWidth: 480, maxHeight: "75vh", display: "flex", flexDirection: "column" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "20px 16px 14px", flexShrink: 0 }}>
+              <div style={{ fontWeight: "800", fontSize: 15, color: C.txt }}>Tetapan Masa Waktu</div>
+              <button onClick={() => setModalTetapanMasa(false)} style={{ background: "none", border: "none", cursor: "pointer" }}><X size={20} color={C.txtMuted} /></button>
+            </div>
+            <div style={{ overflowY: "auto", flex: 1, padding: "0 16px 40px" }}>
+              <div style={{ fontSize: 12, color: C.txtMuted, marginBottom: 14 }}>
+                Teks masa ini dipapar pada poster, kad penceramah dan mesej WhatsApp bagi setiap waktu. Ubah mengikut keperluan masjid.
+              </div>
+              {WAKTU_OPTS.map(w => (
+                <div key={w} style={{ marginBottom: 12 }}>
+                  <div style={{ fontSize: 10, color: C.txtMuted, marginBottom: 3 }}>{w}</div>
+                  <input value={masaWaktu[w] ?? ""} onChange={e => kemasMasaWaktu(w, e.target.value)} placeholder={WAKTU_MASA_DEFAULT[w]} style={inp} />
+                </div>
+              ))}
+              <button onClick={() => { setMasaWaktu({ ...WAKTU_MASA_DEFAULT }); try { localStorage.removeItem("alc_biro_masa_waktu") } catch {} }} style={{ width: "100%", padding: "9px", borderRadius: 8, border: `1px solid ${C.border}`, background: "none", color: C.txtMuted, cursor: "pointer", fontSize: 12, fontWeight: "600", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                <RotateCcw size={13} /> Set semula ke lalai
+              </button>
             </div>
           </div>
         </div>
