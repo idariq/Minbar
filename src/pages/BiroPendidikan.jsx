@@ -123,7 +123,7 @@ function getPosterTheme(slot) {
 
 function slotKosong() {
   return {
-    id: crypto.randomUUID(), tarikh: "", hari: "Isnin", waktu: "Maghrib", jenisProgram: "",
+    id: crypto.randomUUID(), tarikh: "", hari: "Isnin", waktu: "Maghrib", jenisProgram: "", masaKustom: "",
     pengisian: "", penceramah: "", kadar: 100, sarapan: 0,
     status: "", ganti: "", sebenar: false, dariGanjak: false, muslimat: false, ditangguhJadual: false,
     programRasmi: false, notaProgram: "", kewanganSahaja: false, anjakanKe: "", anjakanDari: "", solatTasbih: false
@@ -777,7 +777,7 @@ export default function BiroPendidikan({ onKembali = () => {}, onSetBack }) {
     const hari = slot.hari || ""
     const waktu = slot.waktu || ""
     const mingguKe = dt ? Math.ceil(dt.getDate() / 7) : 1
-    const masa = masaWaktu[waktu] || ""
+    const masa = slot.masaKustom || masaWaktu[waktu] || ""
     const salam = "السَّلَامُ عَلَيْكُمْ وَرَحْمَةُ اللّٰهِ وَبَرَكَاتُهُ\n\n"
 
     if (slot.jenisProgram === "Kelas Muslimat") return `${salam}👩 *KELAS MUSLIMAT*\n\n🗓 *${hari} | ${tarikhStr}*\n⏰ \`${masa}\`\n📍 *${masjid}*\n\n🎙 *Pengajar:*\n${prefix}${penceramah}\n\n📖 *Pengisian:*\n${pengisian}\n\n✨ Muslimat dijemput hadir bersama-sama mengimarahkan majlis ilmu 🤲`
@@ -1057,7 +1057,7 @@ export default function BiroPendidikan({ onKembali = () => {}, onSetBack }) {
     const iso = tarikhKeISO(slot.tarikh, bulanAktif?.bulan)
     const dt = iso ? new Date(iso + "T00:00:00") : null
     const tarikhStr = dt ? `${slot.hari||""}, ${dt.getDate()} ${BLN[dt.getMonth()]} ${dt.getFullYear()}` : (slot.tarikh || "")
-    const masaStr = slotMbd?.masa || masaWaktu[slot.waktu] || ""
+    const masaStr = slotMbd?.masa || slot.masaKustom || masaWaktu[slot.waktu] || ""
 
     // ── Helpers ──
     const dmd = (x, y, s, al = 1) => {
@@ -1978,7 +1978,7 @@ export default function BiroPendidikan({ onKembali = () => {}, onSetBack }) {
       }
 
       // Waktu — bottom left, soft gold
-      const waktuLabel = masaWaktu[s.waktu] || s.waktu || ""
+      const waktuLabel = s.masaKustom || masaWaktu[s.waktu] || s.waktu || ""
       if (waktuLabel) {
         let wf = 16; ctx.font = `400 ${wf}px Lato`
         while (ctx.measureText(waktuLabel).width > cardW - 32 && wf > 12) { wf--; ctx.font = `400 ${wf}px Lato` }
@@ -3793,6 +3793,10 @@ export default function BiroPendidikan({ onKembali = () => {}, onSetBack }) {
                                   {PROGRAM_OPTS.map(p => <option key={p} value={p}>{p}</option>)}
                                 </select>
                               </div>
+                            </div>
+                            <div>
+                              <div style={{ fontSize: 10, color: C.txtMuted, marginBottom: 3 }}>Masa (pilihan — kosongkan untuk guna tetapan lalai {slot.waktu})</div>
+                              <input value={slot.masaKustom || ""} onChange={e => kemasSlot(mIdx, slot.id, "masaKustom", e.target.value)} placeholder={masaWaktu[slot.waktu] || ""} style={inp} />
                             </div>
                             <div>
                               <div style={{ fontSize: 10, color: C.txtMuted, marginBottom: 3 }}>Penceramah</div>
