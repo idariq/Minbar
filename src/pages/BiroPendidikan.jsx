@@ -81,6 +81,10 @@ const KITAB_SEDIA_ADA = [
   "Kitab Panduan Ilmu Fiqh, Bab Solat",
 ]
 
+function kitabTeks(item) {
+  const arr = Array.isArray(item?.kitab) ? item.kitab : (item?.kitab ? [item.kitab] : [])
+  return arr.filter(Boolean).join(" & ")
+}
 const STATUS_OPTS = ["", "Hadir", "Ganti", "Tangguh"]
 const WAKTU_OPTS = ["Subuh", "Duha", "Asar", "Jumaat", "Maghrib", "Isyak"]
 const WAKTU_MASA_DEFAULT = { Subuh: "Selepas Solat Subuh", Duha: "9.00 pagi – 10.30 pagi", Asar: "Selepas Solat Asar", Maghrib: "Selepas Solat Maghrib", Isyak: "Selepas Solat Isyak", Jumaat: "12.30 tengah hari hingga masuk waktu Jumaat" }
@@ -2012,6 +2016,33 @@ export default function BiroPendidikan({ onKembali = () => {}, onSetBack }) {
   function addPgList() {
     setEditPenceramah(p => ({ ...p, pengisian_list: [...p.pengisian_list, { pengisian: "", kitab: "" }] }))
   }
+  function editPgKitab(idx, kIdx, value) {
+    setEditPenceramah(p => {
+      const list = p.pengisian_list.map((x, i) => {
+        if (i !== idx) return x
+        const arr = Array.isArray(x.kitab) ? [...x.kitab] : [x.kitab || ""]
+        arr[kIdx] = value
+        return { ...x, kitab: arr }
+      })
+      return { ...p, pengisian_list: list }
+    })
+  }
+  function addPgKitab(idx) {
+    setEditPenceramah(p => {
+      const list = p.pengisian_list.map((x, i) => i === idx ? { ...x, kitab: [...(Array.isArray(x.kitab) ? x.kitab : [x.kitab || ""]), ""] } : x)
+      return { ...p, pengisian_list: list }
+    })
+  }
+  function removePgKitab(idx, kIdx) {
+    setEditPenceramah(p => {
+      const list = p.pengisian_list.map((x, i) => {
+        if (i !== idx) return x
+        const arr = (Array.isArray(x.kitab) ? x.kitab : [x.kitab || ""]).filter((_, ki) => ki !== kIdx)
+        return { ...x, kitab: arr.length ? arr : [""] }
+      })
+      return { ...p, pengisian_list: list }
+    })
+  }
 
   // ── Senarai Pengisian & Kitab ──
   // Item dengan ID bermula "_L_" ialah nilai tempatan (jadual DB belum dicipta)
@@ -2023,9 +2054,9 @@ export default function BiroPendidikan({ onKembali = () => {}, onSetBack }) {
 
   const getPengisian = slot => {
     const pp = cariPenceramah(slot.penceramah)
-    const gg = (pp?.pengisian_list || []).filter(x => x.pengisian || x.kitab)
+    const gg = (pp?.pengisian_list || []).filter(x => x.pengisian || kitabTeks(x))
     if (gg.length === 1 && !slot.programRasmi) {
-      return [gg[0].pengisian, gg[0].kitab].filter(Boolean).join(" – ")
+      return [gg[0].pengisian, kitabTeks(gg[0])].filter(Boolean).join(" – ")
     }
     return slot.pengisian || ""
   }
@@ -3373,7 +3404,7 @@ export default function BiroPendidikan({ onKembali = () => {}, onSetBack }) {
                     {p.gambar_url && <img src={p.gambar_url} alt="" style={{ width: 36, height: 36, objectFit: "cover", borderRadius: 6, border: `1px solid ${C.border}`, flexShrink: 0 }} />}
                     <div>
                       <div style={{ fontSize: 13, fontWeight: "600", color: p.aktif ? C.txt : C.txtMuted, textDecoration: p.aktif ? "none" : "line-through" }}>{p.nama}</div>
-                      {!isEdit && p.pengisian_list?.filter(x => x.pengisian || x.kitab).map((x, i) => <div key={i} style={{ fontSize: 10, color: C.txtMuted, marginTop: i === 0 ? 2 : 1 }}>{[x.pengisian, x.kitab].filter(Boolean).join(" – ")}</div>)}
+                      {!isEdit && p.pengisian_list?.filter(x => x.pengisian || kitabTeks(x)).map((x, i) => <div key={i} style={{ fontSize: 10, color: C.txtMuted, marginTop: i === 0 ? 2 : 1 }}>{[x.pengisian, kitabTeks(x)].filter(Boolean).join(" – ")}</div>)}
                     </div>
                   </div>
                   <button onClick={e => { e.stopPropagation(); togolPenceramah(p.id, p.aktif) }} style={{ padding: "4px 10px", borderRadius: 6, border: `1px solid ${p.aktif ? C.border : C.primary}`, background: p.aktif ? C.card : `${C.primary}15`, cursor: "pointer", fontSize: 11, color: p.aktif ? C.txtMuted : C.primary, fontWeight: "600", flexShrink: 0 }}>
@@ -3418,7 +3449,13 @@ export default function BiroPendidikan({ onKembali = () => {}, onSetBack }) {
                           <button onClick={() => removePgList(idx)} style={{ padding: "4px", background: "none", border: "none", cursor: "pointer", color: C.danger, flexShrink: 0, alignSelf: "flex-end", marginBottom: 2 }}><X size={14} /></button>
                         </div>
                         <div style={{ fontSize: 9, color: C.txtMuted, marginBottom: 2 }}>Kitab / Nota</div>
-                        <input value={item.kitab} onChange={e => editPgList(idx, "kitab", e.target.value)} placeholder="cth: Kitab Mukashafah Al-Qulub" list="biro-kitab-list-ruj" style={{ ...inp, fontSize: 12 }} />
+                        {(Array.isArray(item.kitab) ? item.kitab : [item.kitab || ""]).map((k, kIdx, arr) => (
+                          <div key={kIdx} style={{ display: "flex", gap: 6, marginBottom: 4 }}>
+                            <input value={k} onChange={e => editPgKitab(idx, kIdx, e.target.value)} placeholder="cth: Kitab Mukashafah Al-Qulub" list="biro-kitab-list-ruj" style={{ ...inp, fontSize: 12, flex: 1 }} />
+                            {arr.length > 1 && <button onClick={() => removePgKitab(idx, kIdx)} style={{ padding: "4px", background: "none", border: "none", cursor: "pointer", color: C.danger, flexShrink: 0 }}><X size={14} /></button>}
+                          </div>
+                        ))}
+                        <button onClick={() => addPgKitab(idx)} style={{ padding: "3px 8px", borderRadius: 6, border: `1px dashed ${C.border}`, background: "none", cursor: "pointer", fontSize: 11, color: C.primary }}>+ Tambah Kitab</button>
                       </div>
                     ))}
                     <button onClick={addPgList} style={{ width: "100%", padding: "7px", borderRadius: 8, border: `1.5px dashed ${C.border}`, background: "none", cursor: "pointer", fontSize: 12, color: C.primary, marginBottom: 10 }}>+ Tambah Pengisian</button>
@@ -3505,8 +3542,8 @@ export default function BiroPendidikan({ onKembali = () => {}, onSetBack }) {
                         const nama = e.target.value
                         kemasTemplatSlot(gIdx, mIdx, "penceramah", nama)
                         const profil = cariPenceramah(nama)
-                        const pgl = (profil?.pengisian_list || []).filter(x => x.pengisian || x.kitab)
-                        if (pgl.length === 1) kemasTemplatSlot(gIdx, mIdx, "pengisian", [pgl[0].pengisian, pgl[0].kitab].filter(Boolean).join(" – "))
+                        const pgl = (profil?.pengisian_list || []).filter(x => x.pengisian || kitabTeks(x))
+                        if (pgl.length === 1) kemasTemplatSlot(gIdx, mIdx, "pengisian", [pgl[0].pengisian, kitabTeks(pgl[0])].filter(Boolean).join(" – "))
                         else if (pgl.length > 1) kemasTemplatSlot(gIdx, mIdx, "pengisian", "")
                       }} placeholder="Penceramah..." list="biro-penceramah-tmpl" style={{ ...inp, marginBottom: 5 }} />
                       <select value={m.jenisProgram || ""} onChange={e => kemasTemplatSlot(gIdx, mIdx, "jenisProgram", e.target.value)} style={{ ...inp, marginBottom: 5 }}>
@@ -3515,12 +3552,12 @@ export default function BiroPendidikan({ onKembali = () => {}, onSetBack }) {
                       </select>
                       {(() => {
                         const profil = cariPenceramah(m.penceramah)
-                        const pgl = (profil?.pengisian_list || []).filter(x => x.pengisian || x.kitab)
-                        if (pgl.length === 1) return <div style={{ padding: "6px 8px", borderRadius: 6, border: `1px solid ${C.border}`, fontSize: 12, background: C.bg, color: C.txt, marginBottom: 5 }}>{[pgl[0].pengisian, pgl[0].kitab].filter(Boolean).join(" – ") || "—"}</div>
+                        const pgl = (profil?.pengisian_list || []).filter(x => x.pengisian || kitabTeks(x))
+                        if (pgl.length === 1) return <div style={{ padding: "6px 8px", borderRadius: 6, border: `1px solid ${C.border}`, fontSize: 12, background: C.bg, color: C.txt, marginBottom: 5 }}>{[pgl[0].pengisian, kitabTeks(pgl[0])].filter(Boolean).join(" – ") || "—"}</div>
                         if (pgl.length > 1) return (
                           <select value={m.pengisian} onChange={e => kemasTemplatSlot(gIdx, mIdx, "pengisian", e.target.value)} style={{ ...inp, marginBottom: 5 }}>
                             <option value="">— Pilih pengisian —</option>
-                            {pgl.map((x, i) => { const v = [x.pengisian, x.kitab].filter(Boolean).join(" – "); return <option key={i} value={v}>{v}</option> })}
+                            {pgl.map((x, i) => { const v = [x.pengisian, kitabTeks(x)].filter(Boolean).join(" – "); return <option key={i} value={v}>{v}</option> })}
                           </select>
                         )
                         return <input value={m.pengisian} onChange={e => kemasTemplatSlot(gIdx, mIdx, "pengisian", e.target.value)} placeholder="Pengisian / Topik..." style={{ ...inp, marginBottom: 5 }} />
@@ -3805,9 +3842,9 @@ export default function BiroPendidikan({ onKembali = () => {}, onSetBack }) {
                                 const nama = e.target.value
                                 kemasSlot(mIdx, slot.id, "penceramah", nama)
                                 const profil = cariPenceramah(nama)
-                                const pgl = (profil?.pengisian_list || []).filter(x => x.pengisian || x.kitab)
+                                const pgl = (profil?.pengisian_list || []).filter(x => x.pengisian || kitabTeks(x))
                                 if (pgl.length === 1) {
-                                  kemasSlot(mIdx, slot.id, "pengisian", [pgl[0].pengisian, pgl[0].kitab].filter(Boolean).join(" – "))
+                                  kemasSlot(mIdx, slot.id, "pengisian", [pgl[0].pengisian, kitabTeks(pgl[0])].filter(Boolean).join(" – "))
                                 } else if (pgl.length > 1) {
                                   kemasSlot(mIdx, slot.id, "pengisian", "")
                                 }
@@ -3820,13 +3857,13 @@ export default function BiroPendidikan({ onKembali = () => {}, onSetBack }) {
                             </div>
                             {(() => {
                               const profil = cariPenceramah(slot.penceramah)
-                              const pgl = (profil?.pengisian_list || []).filter(x => x.pengisian || x.kitab)
+                              const pgl = (profil?.pengisian_list || []).filter(x => x.pengisian || kitabTeks(x))
                               if (pgl.length === 1 && !slot.programRasmi) {
                                 return (
                                   <div>
                                     <div style={{ fontSize: 10, color: C.txtMuted, marginBottom: 3 }}>Pengisian / Kitab</div>
                                     <div style={{ padding: "6px 8px", borderRadius: 6, border: `1px solid ${C.border}`, fontSize: 12, background: C.bg, color: C.txt }}>
-                                      {[pgl[0].pengisian, pgl[0].kitab].filter(Boolean).join(" – ") || "—"}
+                                      {[pgl[0].pengisian, kitabTeks(pgl[0])].filter(Boolean).join(" – ") || "—"}
                                     </div>
                                   </div>
                                 )
@@ -3837,7 +3874,7 @@ export default function BiroPendidikan({ onKembali = () => {}, onSetBack }) {
                                     <div style={{ fontSize: 10, color: C.txtMuted, marginBottom: 3 }}>Pengisian / Kitab</div>
                                     <select value={slot.pengisian} onChange={e => kemasSlot(mIdx, slot.id, "pengisian", e.target.value)} style={sel}>
                                       <option value="">— Pilih pengisian —</option>
-                                      {pgl.map((x, i) => { const v = [x.pengisian, x.kitab].filter(Boolean).join(" – "); return <option key={i} value={v}>{v}</option> })}
+                                      {pgl.map((x, i) => { const v = [x.pengisian, kitabTeks(x)].filter(Boolean).join(" – "); return <option key={i} value={v}>{v}</option> })}
                                     </select>
                                   </div>
                                 )
@@ -4333,7 +4370,7 @@ export default function BiroPendidikan({ onKembali = () => {}, onSetBack }) {
                       {p.gambar_url && <img src={p.gambar_url} alt="" style={{ width: 36, height: 36, objectFit: "cover", borderRadius: 6, border: `1px solid ${C.border}`, flexShrink: 0 }} />}
                       <div>
                         <div style={{ fontSize: 13, fontWeight: "600", color: p.aktif ? C.txt : C.txtMuted, textDecoration: p.aktif ? "none" : "line-through" }}>{p.nama}</div>
-                        {!isEdit && p.pengisian_list?.filter(x => x.pengisian || x.kitab).map((x, i) => <div key={i} style={{ fontSize: 10, color: C.txtMuted, marginTop: i === 0 ? 2 : 1 }}>{[x.pengisian, x.kitab].filter(Boolean).join(" – ")}</div>)}
+                        {!isEdit && p.pengisian_list?.filter(x => x.pengisian || kitabTeks(x)).map((x, i) => <div key={i} style={{ fontSize: 10, color: C.txtMuted, marginTop: i === 0 ? 2 : 1 }}>{[x.pengisian, kitabTeks(x)].filter(Boolean).join(" – ")}</div>)}
                       </div>
                     </div>
                     <button onClick={e => { e.stopPropagation(); togolPenceramah(p.id, p.aktif) }} style={{ padding: "4px 10px", borderRadius: 6, border: `1px solid ${p.aktif ? C.border : C.primary}`, background: p.aktif ? C.card : `${C.primary}15`, cursor: "pointer", fontSize: 11, color: p.aktif ? C.txtMuted : C.primary, fontWeight: "600", flexShrink: 0 }}>
@@ -4378,7 +4415,13 @@ export default function BiroPendidikan({ onKembali = () => {}, onSetBack }) {
                             <button onClick={() => removePgList(idx)} style={{ padding: "4px", background: "none", border: "none", cursor: "pointer", color: C.danger, flexShrink: 0, alignSelf: "flex-end", marginBottom: 2 }}><X size={14} /></button>
                           </div>
                           <div style={{ fontSize: 9, color: C.txtMuted, marginBottom: 2 }}>Kitab / Nota</div>
-                          <input value={item.kitab} onChange={e => editPgList(idx, "kitab", e.target.value)} placeholder="cth: Kitab Mukashafah Al-Qulub" list="biro-kitab-list-modal" style={{ ...inp, fontSize: 12 }} />
+                          {(Array.isArray(item.kitab) ? item.kitab : [item.kitab || ""]).map((k, kIdx, arr) => (
+                            <div key={kIdx} style={{ display: "flex", gap: 6, marginBottom: 4 }}>
+                              <input value={k} onChange={e => editPgKitab(idx, kIdx, e.target.value)} placeholder="cth: Kitab Mukashafah Al-Qulub" list="biro-kitab-list-modal" style={{ ...inp, fontSize: 12, flex: 1 }} />
+                              {arr.length > 1 && <button onClick={() => removePgKitab(idx, kIdx)} style={{ padding: "4px", background: "none", border: "none", cursor: "pointer", color: C.danger, flexShrink: 0 }}><X size={14} /></button>}
+                            </div>
+                          ))}
+                          <button onClick={() => addPgKitab(idx)} style={{ padding: "3px 8px", borderRadius: 6, border: `1px dashed ${C.border}`, background: "none", cursor: "pointer", fontSize: 11, color: C.primary }}>+ Tambah Kitab</button>
                         </div>
                       ))}
                       <button onClick={addPgList} style={{ width: "100%", padding: "7px", borderRadius: 8, border: `1.5px dashed ${C.border}`, background: "none", cursor: "pointer", fontSize: 12, color: C.primary, marginBottom: 10 }}>+ Tambah Pengisian</button>
