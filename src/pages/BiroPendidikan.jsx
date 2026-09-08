@@ -963,7 +963,7 @@ export default function BiroPendidikan({ onKembali = () => {}, onSetBack }) {
       const imgA = masjidImg.naturalWidth / masjidImg.naturalHeight
       const canA = W / H
       let dw, dh, dx = 0, dy = 0
-      if (imgA > canA) { dh = H + 14; dw = dh * imgA; dx = (W - dw) / 2 }
+      if (imgA > canA) { dh = H + 14; dw = dh * imgA; dx = (W - dw) / 2 + (dw - W) * 0.15 }
       else              { dw = W + 14; dh = dw / imgA; dy = (H - dh) / 2 }
       ctx.drawImage(masjidImg, dx, dy, dw, dh)
       ctx.filter = "none"
@@ -1680,7 +1680,7 @@ export default function BiroPendidikan({ onKembali = () => {}, onSetBack }) {
       const imgA = masjidImg.naturalWidth / masjidImg.naturalHeight
       const canA = CW / CH
       let dw, dh, dx = 0, dy = 0
-      if (imgA > canA) { dh = CH + 14; dw = dh * imgA; dx = (CW - dw) / 2 }
+      if (imgA > canA) { dh = CH + 14; dw = dh * imgA; dx = (CW - dw) / 2 + (dw - CW) * 0.15 }
       else             { dw = CW + 14; dh = dw / imgA; dy = (CH - dh) / 2 }
       ctx.drawImage(masjidImg, dx, dy, dw, dh)
       ctx.filter = "none"
@@ -2870,7 +2870,7 @@ export default function BiroPendidikan({ onKembali = () => {}, onSetBack }) {
             ctx.filter = "blur(10px)"
             const ia = masjidImg.naturalWidth / masjidImg.naturalHeight, ca = CW / PH
             let dw, dh, dx = 0, dy = 0
-            if (ia > ca) { dh = PH + 20; dw = dh * ia; dx = (CW - dw) / 2 }
+            if (ia > ca) { dh = PH + 20; dw = dh * ia; dx = (CW - dw) / 2 + (dw - CW) * 0.15 }
             else { dw = CW + 20; dh = dw / ia; dy = (PH - dh) / 2 }
             ctx.drawImage(masjidImg, dx, dy, dw, dh)
             ctx.filter = "none"
