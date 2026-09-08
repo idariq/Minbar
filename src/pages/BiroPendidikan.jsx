@@ -957,9 +957,9 @@ export default function BiroPendidikan({ onKembali = () => {}, onSetBack }) {
     const CX = W / 2               // 540 — vertical centre axis
     const PR = 140, PX = CX, PY = 800   // speaker photo (PR=radius, PY approx for spotlight)
 
-    // ── Layer 1: Background photo (less blur for majlis besar so image shows through) ──
+    // ── Layer 1: Background photo (light blur so image shows through — gaya Ceramah Perdana kini default) ──
     if (masjidImg) {
-      ctx.filter = slotMbd ? "blur(2px)" : "blur(7px)"
+      ctx.filter = "blur(2px)"
       const imgA = masjidImg.naturalWidth / masjidImg.naturalHeight
       const canA = W / H
       let dw, dh, dx = 0, dy = 0
@@ -973,21 +973,13 @@ export default function BiroPendidikan({ onKembali = () => {}, onSetBack }) {
       ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H)
     }
 
-    // ── Layer 2: Dark overlay (majlis besar = lebih telus supaya gambar latar nampak) ──
+    // ── Layer 2: Dark overlay (lebih telus supaya gambar latar nampak — gaya Ceramah Perdana kini default) ──
     const ov = ctx.createLinearGradient(0, 0, 0, H)
-    if (slotMbd) {
-      ov.addColorStop(0,   `rgba(${TR},${TG},${TB},0.82)`)
-      ov.addColorStop(0.25,`rgba(${TR},${TG},${TB},0.60)`)
-      ov.addColorStop(0.5, `rgba(${TR},${TG},${TB},0.38)`)
-      ov.addColorStop(0.75,`rgba(${TR},${TG},${TB},0.60)`)
-      ov.addColorStop(1,   `rgba(${TR},${TG},${TB},0.82)`)
-    } else {
-      ov.addColorStop(0,   `rgba(${TR},${TG},${TB},0.90)`)
-      ov.addColorStop(0.3, `rgba(${TR},${TG},${TB},0.75)`)
-      ov.addColorStop(0.5, `rgba(${TR},${TG},${TB},0.60)`)
-      ov.addColorStop(0.7, `rgba(${TR},${TG},${TB},0.75)`)
-      ov.addColorStop(1,   `rgba(${TR},${TG},${TB},0.90)`)
-    }
+    ov.addColorStop(0,   `rgba(${TR},${TG},${TB},0.82)`)
+    ov.addColorStop(0.25,`rgba(${TR},${TG},${TB},0.60)`)
+    ov.addColorStop(0.5, `rgba(${TR},${TG},${TB},0.38)`)
+    ov.addColorStop(0.75,`rgba(${TR},${TG},${TB},0.60)`)
+    ov.addColorStop(1,   `rgba(${TR},${TG},${TB},0.82)`)
     ctx.fillStyle = ov; ctx.fillRect(0, 0, W, H)
 
     // ── Layer 2b: Vignette sinematik ──
@@ -1142,7 +1134,6 @@ export default function BiroPendidikan({ onKembali = () => {}, onSetBack }) {
     const isMajlisZikir = getNamaProgram(slot) === "Majlis Zikir"
     const isMajlisBesar = !!MAJLIS_BESAR_DATA[getNamaProgram(slot)]
     const mbd = MAJLIS_BESAR_DATA[getNamaProgram(slot)]
-    const photoR = isMajlisBesar ? 165 : PR
     const maxAW = W - 100
     const ayatGrad = ctx.createLinearGradient(CX - 280, 0, CX + 280, 0)
     ayatGrad.addColorStop(0, ACC); ayatGrad.addColorStop(0.5, ACL); ayatGrad.addColorStop(1, ACC)
@@ -1260,9 +1251,14 @@ export default function BiroPendidikan({ onKembali = () => {}, onSetBack }) {
     // ── Program name ──
     const waktuLabel = getNamaProgram(slot).toUpperCase()
 
-    // Majlis besar: wrap into 2 balanced lines, keep font larger
-    let titleLines, wf
-    if (isMajlisBesar) {
+    // Cuba muat 1 baris dahulu (mengecut fon); jika masih terlalu lebar pada saiz minimum,
+    // pecah kepada 2 baris seimbang dengan fon lebih besar — gaya Ceramah Perdana kini default.
+    let titleLines, wf = 104
+    ctx.font = `900 ${wf}px 'Playfair Display'`
+    while (ctx.measureText(waktuLabel).width > W - 60 && wf > 62) { wf -= 4; ctx.font = `900 ${wf}px 'Playfair Display'` }
+    if (ctx.measureText(waktuLabel).width <= W - 60) {
+      titleLines = [waktuLabel]
+    } else {
       wf = 92
       const words = waktuLabel.split(" ")
       let best = { split: 1, diff: Infinity }
@@ -1275,10 +1271,6 @@ export default function BiroPendidikan({ onKembali = () => {}, onSetBack }) {
         ? [words.slice(0, best.split).join(" "), words.slice(best.split).join(" ")]
         : [waktuLabel]
       while (titleLines.some(l => ctx.measureText(l).width > W - 60) && wf > 54) { wf -= 4; ctx.font = `900 ${wf}px 'Playfair Display'` }
-    } else {
-      wf = 104; ctx.font = `900 ${wf}px 'Playfair Display'`
-      while (ctx.measureText(waktuLabel).width > W - 60 && wf > 62) { wf -= 4; ctx.font = `900 ${wf}px 'Playfair Display'` }
-      titleLines = [waktuLabel]
     }
 
     const wGrad = ctx.createLinearGradient(CX - 380, 0, CX + 380, 0)
@@ -1289,20 +1281,16 @@ export default function BiroPendidikan({ onKembali = () => {}, onSetBack }) {
     const lastTitleY = titleY + (titleLines.length - 1) * titleLineH
 
     ctx.save()
-    // Majlis besar: deep layered shadow only — no background band
+    // Bayang berlapis dalam — tiada jalur latar
     ctx.shadowColor = "rgba(0,0,0,1)"
-    ctx.shadowBlur = isMajlisBesar ? 55 : 20
-    ctx.shadowOffsetX = 0; ctx.shadowOffsetY = isMajlisBesar ? 8 : 5
+    ctx.shadowBlur = 55
+    ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 8
     ctx.fillStyle = wGrad
-    if (isMajlisBesar) {
-      // Draw 3× to stack shadow opacity for legibility without background
-      for (let pass = 0; pass < 3; pass++)
-        titleLines.forEach((ln, i) => ctx.fillText(ln, CX, titleY + i * titleLineH))
-    } else {
+    // Lukis 3× untuk timbunkan kelegapan bayang supaya mudah dibaca tanpa jalur latar
+    for (let pass = 0; pass < 3; pass++)
       titleLines.forEach((ln, i) => ctx.fillText(ln, CX, titleY + i * titleLineH))
-    }
     ctx.restore()
-    ctx.lineWidth = isMajlisBesar ? 2.5 : 1.4; ctx.strokeStyle = hexRgba(ACC, 0.45)
+    ctx.lineWidth = 2.5; ctx.strokeStyle = hexRgba(ACC, 0.45)
     titleLines.forEach((ln, i) => ctx.strokeText(ln, CX, titleY + i * titleLineH))
     const ulW = Math.max(...titleLines.map(l => ctx.measureText(l).width)) + 28
     ctx.fillStyle = hexRgba(ACC, 0.35); ctx.fillRect(CX - ulW / 2, lastTitleY + 13, ulW, 6)
@@ -1310,35 +1298,16 @@ export default function BiroPendidikan({ onKembali = () => {}, onSetBack }) {
     const orn1Y = lastTitleY + 44
     ornLine(orn1Y, 48, W - 48)
 
-    // ── Topic / Pengisian ──
+    // ── Topic / Pengisian (dilukis dalam lajur kanan — lihat bawah) ──
     const LABEL_GENERIK = ["umum", "am", "tiada", "-", "–"]
-    let topicLines = [], tf = 58
     const slotPengisian = getPengisian(slot)
     const sepIdx = slotPengisian ? slotPengisian.indexOf(" – ") : -1
     const rawTopik = slotPengisian ? (sepIdx >= 0 ? slotPengisian.slice(0, sepIdx) : slotPengisian) : ""
     const topikStr = LABEL_GENERIK.includes(rawTopik.trim().toLowerCase()) ? "" : rawTopik
     const kitabStr = slotPengisian && sepIdx >= 0 ? slotPengisian.slice(sepIdx + 3) : ""
     const maxTopikW = W - 80
-    if (topikStr) {
-      const buildTopikLines = () => {
-        ctx.font = `italic 700 ${tf}px 'Playfair Display'`
-        let line = "", lines = []
-        for (const w of topikStr.split(" ")) {
-          const test = line ? line + " " + w : w
-          if (ctx.measureText(test).width > maxTopikW) { lines.push(line); line = w } else line = test
-        }
-        if (line) lines.push(line)
-        return lines.slice(0, 2)
-      }
-      topicLines = buildTopikLines()
-      while (tf > 36) {
-        ctx.font = `italic 700 ${tf}px 'Playfair Display'`
-        if (!topicLines.some(l => ctx.measureText(l).width > maxTopikW)) break
-        tf -= 4; topicLines = buildTopikLines()
-      }
-    }
     const hasKitab = kitabStr.length > 0
-    let kf = 36, kitabLines = []
+    let kf = 36
     if (hasKitab) {
       const buildKitabLines = () => {
         ctx.font = `italic 400 ${kf}px Lato`
@@ -1350,55 +1319,15 @@ export default function BiroPendidikan({ onKembali = () => {}, onSetBack }) {
         if (line) lines.push(line)
         return lines.slice(0, 2)
       }
-      kitabLines = buildKitabLines()
+      let kitabLines = buildKitabLines()
       while (kf > 22 && kitabLines.some(l => ctx.measureText(l).width > maxTopikW)) { kf -= 2; kitabLines = buildKitabLines() }
     }
-    const kitabLineH = kf + 6
-    const kitabExtra = hasKitab ? (kitabLines.length - 1) * kitabLineH : 0
-    // Majlis besar needs extra room so "— TAJUK —" label clears the ornament line
-    const mbGap = isMajlisBesar ? 52 : 0
-    const orn2Y = topicLines.length === 0 ? orn1Y + 54
-                : topicLines.length === 1 && !hasKitab ? orn1Y + 92 + mbGap
-                : topicLines.length === 1 ?  orn1Y + 130 + mbGap + kitabExtra
-                : !hasKitab ?                orn1Y + 115 + mbGap
-                :                            orn1Y + 162 + mbGap + kitabExtra
-    if (topicLines.length > 0 && !isMajlisBesar) {
-      const lineGap = tf + 10
-      const kitabGap = hasKitab ? kf + 14 : 0
-      const topikSpan = (topicLines.length - 1) * lineGap
-      const totalH = topikSpan + tf + kitabGap + kitabExtra
-      const ty0 = Math.round((orn1Y + orn2Y) / 2 - totalH / 2 + tf * 0.82)
-
-      // Majlis besar: "TAJUK" label above topic — large gold, clearly visible
-      if (isMajlisBesar) {
-        ctx.save()
-        ctx.shadowColor = "rgba(0,0,0,1)"; ctx.shadowBlur = 20; ctx.shadowOffsetY = 3
-        ctx.fillStyle = goldRgba(0.98); ctx.font = "700 28px Lato"; ctx.textAlign = "center"
-        ctx.fillText("— T A J U K —", CX, ty0 - tf - 16)
-        ctx.restore()
-      }
-      ctx.shadowColor = "rgba(0,0,0,0.95)"; ctx.shadowBlur = isMajlisBesar ? 40 : 12
-      ctx.shadowOffsetX = 0; ctx.shadowOffsetY = isMajlisBesar ? 6 : 2
-      ctx.fillStyle = "rgba(255,255,255,0.97)"; ctx.textAlign = "center"
-      if (isMajlisBesar) {
-        for (let pass = 0; pass < 3; pass++)
-          topicLines.forEach((ln, i) => { ctx.font = `italic 700 ${tf}px 'Playfair Display'`; ctx.fillText(ln, CX, ty0 + i * lineGap) })
-      } else {
-        topicLines.forEach((ln, i) => { ctx.font = `italic 700 ${tf}px 'Playfair Display'`; ctx.fillText(ln, CX, ty0 + i * lineGap) })
-      }
-      if (hasKitab) {
-        ctx.font = `italic 400 ${kf}px Lato`; ctx.fillStyle = goldRgba(0.92)
-        kitabLines.forEach((ln, i) => ctx.fillText(ln, CX, ty0 + topikSpan + kitabGap + i * kitabLineH))
-      }
-      ctx.shadowColor = "transparent"; ctx.shadowBlur = 0; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0
-    }
-    if ((topicLines.length > 0 || hasKitab) && !isMajlisBesar) ornLine(orn2Y, 84, W - 84)
 
     // ── Speaker photo + name + event details ──
     const prefix = (slot.penceramah || "").includes("Ustazah") ? "Al-Fadhilah" : "Al-Fadhil"
 
-    if (isMajlisBesar) {
-      // ── Majlis Besar: 2-column — left=photo+name, right=tajuk+event ──
+    {
+      // ── Lajur 2: kiri=gambar+nama, kanan=tajuk+butiran acara — gaya Ceramah Perdana kini default ──
       const LCX = Math.round(W / 4)          // 270
       const RCX = Math.round(3 * W / 4) - 8  // 802 — nudged left so right text keeps an edge margin
       const colTop = orn1Y + 24
@@ -1566,6 +1495,12 @@ export default function BiroPendidikan({ onKembali = () => {}, onSetBack }) {
       const evGap = 66                  // tighter spacing between rows
       const evStartY = rightOrnY + 58   // push tarikh clear of the ornament line
 
+      // Tarikh — shrink font to fit within the (narrower) right-column panel
+      const tarikhMaxW = rPanelW - 150
+      let tdf = 42
+      ctx.font = `700 ${tdf}px 'Playfair Display'`
+      while (tdf > 26 && ctx.measureText(tarikhStr).width > tarikhMaxW) { tdf -= 2; ctx.font = `700 ${tdf}px 'Playfair Display'` }
+
       // Masa — wrap to 2 balanced lines if the text is long
       const masaFont = mbd?.masa ? "400 32px Lato" : "400 34px Lato"
       const masaMaxW = rPanelW - 150
@@ -1618,7 +1553,7 @@ export default function BiroPendidikan({ onKembali = () => {}, onSetBack }) {
 
       ctx.save()
       ctx.shadowColor = "rgba(0,0,0,0.95)"; ctx.shadowBlur = 14; ctx.shadowOffsetY = 3
-      withIcon(calIcon, 46, tarikhStr, RCX, tarikhY, "700 42px 'Playfair Display'", "#ffffff")
+      withIcon(calIcon, 46, tarikhStr, RCX, tarikhY, `700 ${tdf}px 'Playfair Display'`, "#ffffff")
       if (masaLines.length > 1) iconTextRows(clockIcon, 35, masaLines, RCX, masaY, masaFont, "rgba(255,255,255,0.88)", masaLineH)
       else withIcon(clockIcon, 35, masaLines[0], RCX, masaY, masaFont, "rgba(255,255,255,0.88)")
       if (adaTasbih) {
@@ -1628,92 +1563,42 @@ export default function BiroPendidikan({ onKembali = () => {}, onSetBack }) {
       withIcon(pinIcon, 32, data?.masjid || "Masjid Parit Setongkat", RCX, lokasiY, "700 32px Lato", goldRgba(0.98))
       ctx.restore()
 
-      // Invitation pill — fills the space below the info panel
-      const inviteTxt = "Muslimin dan Muslimat dijemput hadir"
-      ctx.font = "italic 400 24px Lato"
-      const ipillW = ctx.measureText(inviteTxt).width + 56
-      const ipillH = 54
-      const ipillX = RCX - ipillW / 2
-      const inviteCenterY = lokasiY + 64
-      const ipillY = inviteCenterY - ipillH / 2
-      ctx.save()
-      ctx.fillStyle = "rgba(0,0,0,0.42)"
-      if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(ipillX, ipillY, ipillW, ipillH, ipillH / 2); ctx.fill() }
-      else ctx.fillRect(ipillX, ipillY, ipillW, ipillH)
-      ctx.strokeStyle = goldRgba(0.55); ctx.lineWidth = 1.5
-      if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(ipillX, ipillY, ipillW, ipillH, ipillH / 2); ctx.stroke() }
-      else ctx.strokeRect(ipillX, ipillY, ipillW, ipillH)
-      ctx.restore()
-      ctx.save()
-      ctx.shadowColor = "rgba(0,0,0,0.9)"; ctx.shadowBlur = 8; ctx.shadowOffsetY = 2
-      ctx.fillStyle = goldRgba(0.96); ctx.font = "italic 400 24px Lato"; ctx.textAlign = "center"
-      ctx.fillText(inviteTxt, RCX, inviteCenterY + 8)
-      ctx.restore()
+      // Invitation pill (majlis besar) / nota kaki ringkas (kuliah biasa) — fills the space below the info panel
+      let footerBottomY
+      if (isMajlisBesar) {
+        const inviteTxt = "Muslimin dan Muslimat dijemput hadir"
+        ctx.font = "italic 400 24px Lato"
+        const ipillW = ctx.measureText(inviteTxt).width + 56
+        const ipillH = 54
+        const ipillX = RCX - ipillW / 2
+        const inviteCenterY = lokasiY + 64
+        const ipillY = inviteCenterY - ipillH / 2
+        ctx.save()
+        ctx.fillStyle = "rgba(0,0,0,0.42)"
+        if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(ipillX, ipillY, ipillW, ipillH, ipillH / 2); ctx.fill() }
+        else ctx.fillRect(ipillX, ipillY, ipillW, ipillH)
+        ctx.strokeStyle = goldRgba(0.55); ctx.lineWidth = 1.5
+        if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(ipillX, ipillY, ipillW, ipillH, ipillH / 2); ctx.stroke() }
+        else ctx.strokeRect(ipillX, ipillY, ipillW, ipillH)
+        ctx.restore()
+        ctx.save()
+        ctx.shadowColor = "rgba(0,0,0,0.9)"; ctx.shadowBlur = 8; ctx.shadowOffsetY = 2
+        ctx.fillStyle = goldRgba(0.96); ctx.font = "italic 400 24px Lato"; ctx.textAlign = "center"
+        ctx.fillText(inviteTxt, RCX, inviteCenterY + 8)
+        ctx.restore()
+        footerBottomY = ipillY + ipillH
+      } else {
+        const footerY = lokasiY + 56
+        ctx.save()
+        ctx.fillStyle = "rgba(255,255,255,0.30)"; ctx.font = "italic 400 18px Lato"; ctx.textAlign = "center"
+        ctx.fillText("*Tertakluk kepada perubahan tanpa notis awal", RCX, footerY)
+        ctx.restore()
+        footerBottomY = footerY + 8
+      }
 
       // Bottom ornament
-      const inviteBottom = ipillY + ipillH
-      const bottomOrnY = Math.min(Math.max(inviteBottom + 40, H - 100), H - 52)
+      const bottomOrnY = Math.min(Math.max(footerBottomY + 40, H - 100), H - 52)
       ornLine(bottomOrnY, 80, W - 80)
-
-    } else {
-      // ── Regular layout: centred photo → name → event details ──
-      const PY_photo = orn2Y + 42 + photoR + 10
-      if (speakerImg) {
-        ctx.save()
-        ctx.shadowColor = ACC; ctx.shadowBlur = 28
-        ctx.strokeStyle = ACC; ctx.lineWidth = 3
-        ctx.beginPath(); ctx.arc(CX, PY_photo, photoR + 6, 0, Math.PI * 2); ctx.stroke()
-        ctx.restore()
-        ctx.strokeStyle = hexRgba(ACC, 0.22); ctx.lineWidth = 1
-        ctx.beginPath(); ctx.arc(CX, PY_photo, photoR + 18, 0, Math.PI * 2); ctx.stroke()
-        ctx.save()
-        ctx.beginPath(); ctx.arc(CX, PY_photo, photoR, 0, Math.PI * 2); ctx.clip()
-        const imgA = speakerImg.naturalWidth / speakerImg.naturalHeight
-        let pdw, pdh
-        if (imgA > 1) { pdh = photoR * 2; pdw = pdh * imgA } else { pdw = photoR * 2; pdh = pdw / imgA }
-        ctx.drawImage(speakerImg, CX - pdw / 2, PY_photo - pdh / 2, pdw, pdh)
-        ctx.restore()
-      } else {
-        ctx.fillStyle = hexRgba(ACC, 0.1)
-        ctx.beginPath(); ctx.arc(CX, PY_photo, photoR, 0, Math.PI * 2); ctx.fill()
-        ctx.strokeStyle = ACC; ctx.lineWidth = 2
-        ctx.beginPath(); ctx.arc(CX, PY_photo, photoR, 0, Math.PI * 2); ctx.stroke()
-      }
-
-      const nameTop = PY_photo + photoR + 42
-      ctx.fillStyle = goldRgba(0.9); ctx.font = "italic 400 33px Lato"; ctx.textAlign = "center"
-      ctx.fillText(prefix, CX, nameTop)
-      const nameMaxW = W - 80
-      let nf = 48; ctx.font = `700 ${nf}px 'Playfair Display'`
-      while (ctx.measureText(slot.penceramah || "").width > nameMaxW && nf > 30) { nf -= 3; ctx.font = `700 ${nf}px 'Playfair Display'` }
-      const nWords = (slot.penceramah || "").split(" ")
-      let nLine = "", nY = nameTop + nf + 12
-      for (const w of nWords) {
-        const t = nLine ? nLine + " " + w : w
-        if (ctx.measureText(t).width > nameMaxW) {
-          ctx.fillStyle = "#ffffff"; ctx.fillText(nLine, CX, nY); nLine = w; nY += nf + 8
-        } else nLine = t
-      }
-      if (nLine) { ctx.fillStyle = "#ffffff"; ctx.font = `700 ${nf}px 'Playfair Display'`; ctx.fillText(nLine, CX, nY) }
-
-      const detailsTopY = nY + 42
-      const adaTasbih = !!slot.solatTasbih
-      ornLine(detailsTopY, 80, W - 80)
-      withIcon(calIcon, 46, tarikhStr, CX, detailsTopY + 58, "700 44px 'Playfair Display'", "#ffffff")
-      withIcon(clockIcon, 33, masaStr, CX, detailsTopY + 102, "300 36px Lato", "rgba(255,255,255,0.80)")
-      if (adaTasbih) {
-        ctx.save()
-        ctx.shadowColor = "rgba(0,0,0,0.9)"; ctx.shadowBlur = 10; ctx.shadowOffsetY = 2
-        ctx.fillStyle = goldRgba(0.92); ctx.font = "italic 700 26px Lato"; ctx.textAlign = "center"
-        ctx.fillText("✦ Didahului Solat Sunat Tasbih ✦", CX, detailsTopY + 138)
-        ctx.restore()
-      }
-      withIcon(pinIcon, 31, data?.masjid || "Masjid Parit Setongkat", CX, detailsTopY + (adaTasbih ? 174 : 138), "italic 700 34px Lato", goldRgba(0.96))
-
-      const bottomOrnY = Math.min(Math.max(detailsTopY + (adaTasbih ? 206 : 170), H - 100), H - 52)
-      ornLine(bottomOrnY, 80, W - 80)
-      ctx.fillStyle = "rgba(255,255,255,0.28)"; ctx.font = "italic 400 18px Lato"; ctx.textAlign = "center"
-      ctx.fillText("*Tertakluk kepada perubahan tanpa notis awal", CX, bottomOrnY + 38)
     }
 
     // ── Preview (bukan terus muat turun) ──
