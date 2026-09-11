@@ -1332,48 +1332,37 @@ export default function BiroPendidikan({ onKembali = () => {}, onSetBack }) {
       const RCX = Math.round(3 * W / 4) - 8  // 802 — nudged left so right text keeps an edge margin
       const colTop = orn1Y + 24
 
-      // ── LEFT: bingkai memanjang + speaker name ──
+      // ── LEFT: gambar bulat + speaker name ──
       const frameW = 400
       const frameH = 500
-      const frameX = LCX - Math.round(frameW / 2)
       const frameY = colTop
-      const frameRadius = 12
+      const photoCX = LCX
+      const photoCY = frameY + frameH / 2
+      const photoR = Math.min(frameW, frameH) / 2
 
       if (speakerImg) {
         ctx.save()
-        ctx.beginPath()
-        if (ctx.roundRect) ctx.roundRect(frameX, frameY, frameW, frameH, frameRadius)
-        else ctx.rect(frameX, frameY, frameW, frameH)
-        ctx.clip()
-        const natAspect = speakerImg.naturalHeight / speakerImg.naturalWidth
-        const frmAspect = frameH / frameW
-        let pdw, pdh, pdx, pdy
-        if (natAspect > frmAspect) {
-          pdw = frameW; pdh = pdw * natAspect; pdx = frameX; pdy = frameY
-        } else {
-          pdh = frameH; pdw = pdh / natAspect; pdx = frameX + (frameW - pdw) / 2; pdy = frameY
-        }
-        ctx.drawImage(speakerImg, pdx, pdy, pdw, pdh)
-        ctx.restore()
-        ctx.save()
         ctx.strokeStyle = ACC; ctx.lineWidth = 2.5
         ctx.shadowColor = ACC; ctx.shadowBlur = 18
-        ctx.beginPath()
-        if (ctx.roundRect) ctx.roundRect(frameX, frameY, frameW, frameH, frameRadius)
-        else ctx.rect(frameX, frameY, frameW, frameH)
-        ctx.stroke(); ctx.restore()
+        ctx.beginPath(); ctx.arc(photoCX, photoCY, photoR + 3, 0, Math.PI * 2); ctx.stroke()
+        ctx.restore()
         ctx.save(); ctx.globalAlpha = 0.25; ctx.strokeStyle = GOLD; ctx.lineWidth = 1
-        ctx.beginPath()
-        if (ctx.roundRect) ctx.roundRect(frameX - 6, frameY - 6, frameW + 12, frameH + 12, frameRadius + 4)
-        else ctx.rect(frameX - 6, frameY - 6, frameW + 12, frameH + 12)
-        ctx.stroke(); ctx.restore()
+        ctx.beginPath(); ctx.arc(photoCX, photoCY, photoR + 12, 0, Math.PI * 2); ctx.stroke()
+        ctx.restore()
+        ctx.save()
+        ctx.beginPath(); ctx.arc(photoCX, photoCY, photoR, 0, Math.PI * 2); ctx.clip()
+        const imgA = speakerImg.naturalWidth / speakerImg.naturalHeight
+        let pdw, pdh
+        if (imgA > 1) { pdh = photoR * 2; pdw = pdh * imgA } else { pdw = photoR * 2; pdh = pdw / imgA }
+        ctx.drawImage(speakerImg, photoCX - pdw / 2, photoCY - pdh / 2, pdw, pdh)
+        ctx.restore()
       } else {
         ctx.fillStyle = hexRgba(ACC, 0.10)
-        ctx.beginPath(); ctx.arc(LCX, frameY + frameH / 2, Math.min(frameW, frameH) / 2, 0, Math.PI * 2); ctx.fill()
+        ctx.beginPath(); ctx.arc(photoCX, photoCY, photoR, 0, Math.PI * 2); ctx.fill()
         ctx.strokeStyle = hexRgba(ACC, 0.45); ctx.lineWidth = 1.5
-        ctx.beginPath(); ctx.arc(LCX, frameY + frameH / 2, Math.min(frameW, frameH) / 2, 0, Math.PI * 2); ctx.stroke()
+        ctx.beginPath(); ctx.arc(photoCX, photoCY, photoR, 0, Math.PI * 2); ctx.stroke()
       }
-      const photoBottomY = frameY + frameH
+      const photoBottomY = photoCY + photoR
 
       // Label "PENCERAMAH JEMPUTAN" + speaker name below photo
       const maxSideNameW = frameW + 10
