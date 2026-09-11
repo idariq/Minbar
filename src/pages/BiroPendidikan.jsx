@@ -1138,8 +1138,8 @@ export default function BiroPendidikan({ onKembali = () => {}, onSetBack }) {
     const ayatGrad = ctx.createLinearGradient(CX - 280, 0, CX + 280, 0)
     ayatGrad.addColorStop(0, ACC); ayatGrad.addColorStop(0.5, ACL); ayatGrad.addColorStop(1, ACC)
 
-    // ── Org header — compact so hadith gets more breathing room ──
-    const LOGO_R = 32, LOGO_CY = 60
+    // ── Org header — logo & teks diselaraskan supaya sepadan dari segi saiz ──
+    const LOGO_R = 36, LOGO_CY = 64
     if (logoImg) {
       ctx.save(); ctx.beginPath(); ctx.arc(CX, LOGO_CY, LOGO_R, 0, Math.PI * 2); ctx.clip()
       ctx.drawImage(logoImg, CX - LOGO_R, LOGO_CY - LOGO_R, LOGO_R * 2, LOGO_R * 2); ctx.restore()
@@ -1148,13 +1148,13 @@ export default function BiroPendidikan({ onKembali = () => {}, onSetBack }) {
     }
     if (isMajlisBesar) {
       // Majlis besar: masjid name only — not specific to one biro
-      ctx.fillStyle = "rgba(255,255,255,0.92)"; ctx.font = "700 24px Lato"; ctx.textAlign = "center"
-      ctx.fillText((data?.masjid || "Masjid Parit Setongkat").toUpperCase(), CX, LOGO_CY + LOGO_R + 30)
+      ctx.fillStyle = "rgba(255,255,255,0.92)"; ctx.font = "700 27px Lato"; ctx.textAlign = "center"
+      ctx.fillText((data?.masjid || "Masjid Parit Setongkat").toUpperCase(), CX, LOGO_CY + LOGO_R + 34)
     } else {
-      ctx.fillStyle = "rgba(255,255,255,0.82)"; ctx.font = "700 25px Lato"; ctx.textAlign = "center"
-      ctx.fillText("BIRO PENDIDIKAN DAN DAKWAH", CX, LOGO_CY + LOGO_R + 24)
-      ctx.fillStyle = "rgba(255,255,255,0.52)"; ctx.font = "400 17px Lato"
-      ctx.fillText(data?.masjid || "Masjid Parit Setongkat", CX, LOGO_CY + LOGO_R + 44)
+      ctx.fillStyle = "rgba(255,255,255,0.88)"; ctx.font = "700 27px Lato"; ctx.textAlign = "center"
+      ctx.fillText("BIRO PENDIDIKAN DAN DAKWAH", CX, LOGO_CY + LOGO_R + 28)
+      ctx.fillStyle = "rgba(255,255,255,0.68)"; ctx.font = "400 20px Lato"
+      ctx.fillText(data?.masjid || "Masjid Parit Setongkat", CX, LOGO_CY + LOGO_R + 54)
     }
 
     // ── Ayat / Hadith section ──
