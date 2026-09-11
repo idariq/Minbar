@@ -1305,23 +1305,7 @@ export default function BiroPendidikan({ onKembali = () => {}, onSetBack }) {
     const rawTopik = slotPengisian ? (sepIdx >= 0 ? slotPengisian.slice(0, sepIdx) : slotPengisian) : ""
     const topikStr = LABEL_GENERIK.includes(rawTopik.trim().toLowerCase()) ? "" : rawTopik
     const kitabStr = slotPengisian && sepIdx >= 0 ? slotPengisian.slice(sepIdx + 3) : ""
-    const maxTopikW = W - 80
     const hasKitab = kitabStr.length > 0
-    let kf = 36
-    if (hasKitab) {
-      const buildKitabLines = () => {
-        ctx.font = `italic 400 ${kf}px Lato`
-        let line = "", lines = []
-        for (const w of kitabStr.split(" ")) {
-          const test = line ? line + " " + w : w
-          if (ctx.measureText(test).width > maxTopikW) { if (line) lines.push(line); line = w } else line = test
-        }
-        if (line) lines.push(line)
-        return lines.slice(0, 2)
-      }
-      let kitabLines = buildKitabLines()
-      while (kf > 22 && kitabLines.some(l => ctx.measureText(l).width > maxTopikW)) { kf -= 2; kitabLines = buildKitabLines() }
-    }
 
     // ── Speaker photo + name + event details ──
     const prefix = (slot.penceramah || "").includes("Ustazah") ? "Al-Fadhilah" : "Al-Fadhil"
@@ -1436,22 +1420,24 @@ export default function BiroPendidikan({ onKembali = () => {}, onSetBack }) {
         while (rtf > 32 && rTopLines.length > 3) { rtf -= 2; rTopLines = buildRL() }
         if (rTopLines.length > 3) rTopLines = rTopLines.slice(0, 3)
       }
-      let rkf = Math.min(kf, 30), rKitabLines = []
+      let rkf = 34, rKitabLines = []
+      const kitabWeight = 600
       if (hasKitab) {
         const buildRKL = () => {
-          ctx.font = `italic 400 ${rkf}px Lato`
+          ctx.font = `italic ${kitabWeight} ${rkf}px Lato`
           let rl = "", rll = []
           for (const w of kitabStr.split(" ")) {
             const t2 = rl ? rl + " " + w : w
             if (ctx.measureText(t2).width > maxRTopW) { if (rl) rll.push(rl); rl = w } else rl = t2
           }
           if (rl) rll.push(rl)
-          return rll.slice(0, 2)
+          return rll
         }
         rKitabLines = buildRKL()
-        while (rkf > 22 && rKitabLines.some(l => ctx.measureText(l).width > maxRTopW)) { rkf -= 2; rKitabLines = buildRKL() }
+        while (rkf > 26 && rKitabLines.length > 2) { rkf -= 2; rKitabLines = buildRKL() }
+        if (rKitabLines.length > 2) rKitabLines = rKitabLines.slice(0, 2)
       }
-      const rKitabLineH = rkf + 6
+      const rKitabLineH = rkf + 8
 
       let rtY = isMajlisBesar ? (rightTop + 22 + 28) : (rightTop + 10)
       if (rTopLines.length > 0) {
@@ -1465,15 +1451,15 @@ export default function BiroPendidikan({ onKembali = () => {}, onSetBack }) {
         ctx.lineWidth = 2.0; ctx.strokeStyle = hexRgba(ACC, 0.45)
         rTopLines.forEach((ln, i) => { ctx.font = `italic 700 ${rtf}px 'Playfair Display'`; ctx.strokeText(ln, RCX, rtY + rtf + i * rGap) })
         if (hasKitab) {
-          const kitabY = rtY + rtf + (rTopLines.length - 1) * rGap + rkf + 12
-          ctx.font = `italic 400 ${rkf}px Lato`; ctx.fillStyle = goldRgba(0.92); ctx.textAlign = "center"
+          const kitabY = rtY + rtf + (rTopLines.length - 1) * rGap + rkf + 14
+          ctx.font = `italic ${kitabWeight} ${rkf}px Lato`; ctx.fillStyle = goldRgba(0.95); ctx.textAlign = "center"
           rKitabLines.forEach((ln, i) => ctx.fillText(ln, RCX, kitabY + i * rKitabLineH))
           rtY = kitabY + (rKitabLines.length - 1) * rKitabLineH
         } else {
           rtY = rtY + rtf + (rTopLines.length - 1) * rGap
         }
       } else if (hasKitab) {
-        ctx.font = `italic 400 ${rkf}px Lato`; ctx.fillStyle = goldRgba(0.92); ctx.textAlign = "center"
+        ctx.font = `italic ${kitabWeight} ${rkf}px Lato`; ctx.fillStyle = goldRgba(0.95); ctx.textAlign = "center"
         rKitabLines.forEach((ln, i) => ctx.fillText(ln, RCX, rtY + rkf + i * rKitabLineH))
         rtY = rtY + rkf + (rKitabLines.length - 1) * rKitabLineH
       }
