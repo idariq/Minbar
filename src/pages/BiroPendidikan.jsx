@@ -1581,17 +1581,20 @@ export default function BiroPendidikan({ onKembali = () => {}, onSetBack }) {
         ctx.restore()
         footerBottomY = ipillY + ipillH
       } else {
-        const footerY = lokasiY + 56
-        ctx.save()
-        ctx.fillStyle = "rgba(255,255,255,0.30)"; ctx.font = "italic 400 18px Lato"; ctx.textAlign = "center"
-        ctx.fillText("*Tertakluk kepada perubahan tanpa notis awal", RCX, footerY)
-        ctx.restore()
-        footerBottomY = footerY + 8
+        footerBottomY = lokasiY + 20
       }
 
       // Bottom ornament
       const bottomOrnY = Math.min(Math.max(footerBottomY + 40, H - 100), H - 52)
       ornLine(bottomOrnY, 80, W - 80)
+
+      // Nota kaki — di footer poster (bawah sekali), merentasi lebar penuh
+      if (!isMajlisBesar) {
+        ctx.save()
+        ctx.fillStyle = "rgba(255,255,255,0.45)"; ctx.font = "italic 400 21px Lato"; ctx.textAlign = "center"
+        ctx.fillText("*Tertakluk kepada perubahan tanpa notis awal", CX, bottomOrnY + 34)
+        ctx.restore()
+      }
     }
 
     // ── Preview (bukan terus muat turun) ──
