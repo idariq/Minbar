@@ -1158,7 +1158,7 @@ export default function BiroPendidikan({ onKembali = () => {}, onSetBack }) {
     }
 
     // ── Ayat / Hadith section ──
-    const HD_TOP = LOGO_CY + LOGO_R + 112
+    const HD_TOP = LOGO_CY + LOGO_R + 130
     const maxTW = W - 80
     let sepY
     ctx.textAlign = "center"
