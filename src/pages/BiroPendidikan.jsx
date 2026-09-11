@@ -1494,12 +1494,12 @@ export default function BiroPendidikan({ onKembali = () => {}, onSetBack }) {
       ctx.font = `700 ${tdf}px 'Playfair Display'`
       while (tdf > 30 && ctx.measureText(tarikhStr).width > tarikhMaxW) { tdf -= 2; ctx.font = `700 ${tdf}px 'Playfair Display'` }
 
-      // Masa — wrap to 2 balanced lines if the text is long
-      const masaFont = mbd?.masa ? "400 32px Lato" : "400 34px Lato"
+      // Masa — bungkus & kecutkan fon supaya sentiasa muat dalam panel (jangan sampai melimpah keluar poster)
+      let mfSize = mbd?.masa ? 32 : 34
       const masaMaxW = rPanelW - 150
-      ctx.font = masaFont
-      let masaLines = [masaStr]
-      if (ctx.measureText(masaStr).width > masaMaxW) {
+      const buildMasaBalanced = () => {
+        ctx.font = `400 ${mfSize}px Lato`
+        if (ctx.measureText(masaStr).width <= masaMaxW) return [masaStr]
         const mw = masaStr.split(" ")
         let best = { split: 1, diff: Infinity }
         for (let i = 1; i < mw.length; i++) {
@@ -1507,9 +1507,23 @@ export default function BiroPendidikan({ onKembali = () => {}, onSetBack }) {
           const b = ctx.measureText(mw.slice(i).join(" ")).width
           if (Math.max(a, b) <= masaMaxW && Math.abs(a - b) < best.diff) best = { split: i, diff: Math.abs(a - b) }
         }
-        if (best.diff < Infinity) masaLines = [mw.slice(0, best.split).join(" "), mw.slice(best.split).join(" ")]
+        return best.diff < Infinity ? [mw.slice(0, best.split).join(" "), mw.slice(best.split).join(" ")] : null
       }
-      const masaLineH = 40
+      let masaLines = buildMasaBalanced()
+      while (!masaLines && mfSize > 20) { mfSize -= 2; masaLines = buildMasaBalanced() }
+      if (!masaLines) {
+        // Jaring keselamatan — bungkus rakus (dijamin muat) untuk teks masa yang amat panjang
+        ctx.font = `400 ${mfSize}px Lato`
+        let line = "", lines = []
+        for (const w of masaStr.split(" ")) {
+          const test = line ? line + " " + w : w
+          if (ctx.measureText(test).width > masaMaxW) { if (line) lines.push(line); line = w } else line = test
+        }
+        if (line) lines.push(line)
+        masaLines = lines
+      }
+      const masaFont = `400 ${mfSize}px Lato`
+      const masaLineH = mfSize + 6
       const masaExtra = masaLines.length > 1 ? masaLineH : 0
 
       // Row baselines — bring the three details closer together
