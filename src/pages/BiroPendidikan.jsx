@@ -1354,7 +1354,7 @@ export default function BiroPendidikan({ onKembali = () => {}, onSetBack }) {
       ctx.save()
       ctx.shadowColor = "rgba(0,0,0,0.9)"; ctx.shadowBlur = 8; ctx.shadowOffsetY = 2
       ctx.fillStyle = goldRgba(0.95); ctx.font = "700 22px Lato"; ctx.textAlign = "center"
-      ctx.fillText("PENCERAMAH JEMPUTAN", LCX, labelY)
+      ctx.fillText(isMajlisZikir ? "PEMIMPIN MAJLIS" : "PENCERAMAH JEMPUTAN", LCX, labelY)
       ctx.restore()
       ctx.save(); ctx.globalAlpha = 0.5; ctx.strokeStyle = GOLD; ctx.lineWidth = 1
       ctx.beginPath(); ctx.moveTo(LCX - 72, labelY + 12); ctx.lineTo(LCX + 72, labelY + 12); ctx.stroke(); ctx.restore()
@@ -1556,33 +1556,31 @@ export default function BiroPendidikan({ onKembali = () => {}, onSetBack }) {
       withIcon(pinIcon, 32, data?.masjid || "Masjid Parit Setongkat", RCX, lokasiY, "700 32px Lato", goldRgba(0.98))
       ctx.restore()
 
-      // Invitation pill (majlis besar) / nota kaki ringkas (kuliah biasa) — fills the space below the info panel
-      let footerBottomY
-      if (isMajlisBesar) {
-        const inviteTxt = "Muslimin dan Muslimat dijemput hadir"
-        ctx.font = "italic 400 24px Lato"
-        const ipillW = ctx.measureText(inviteTxt).width + 56
-        const ipillH = 54
-        const ipillX = RCX - ipillW / 2
-        const inviteCenterY = lokasiY + 64
-        const ipillY = inviteCenterY - ipillH / 2
-        ctx.save()
-        ctx.fillStyle = "rgba(0,0,0,0.42)"
-        if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(ipillX, ipillY, ipillW, ipillH, ipillH / 2); ctx.fill() }
-        else ctx.fillRect(ipillX, ipillY, ipillW, ipillH)
-        ctx.strokeStyle = goldRgba(0.55); ctx.lineWidth = 1.5
-        if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(ipillX, ipillY, ipillW, ipillH, ipillH / 2); ctx.stroke() }
-        else ctx.strokeRect(ipillX, ipillY, ipillW, ipillH)
-        ctx.restore()
-        ctx.save()
-        ctx.shadowColor = "rgba(0,0,0,0.9)"; ctx.shadowBlur = 8; ctx.shadowOffsetY = 2
-        ctx.fillStyle = goldRgba(0.96); ctx.font = "italic 400 24px Lato"; ctx.textAlign = "center"
-        ctx.fillText(inviteTxt, RCX, inviteCenterY + 8)
-        ctx.restore()
-        footerBottomY = ipillY + ipillH
-      } else {
-        footerBottomY = lokasiY + 20
-      }
+      // Invitation pill — teks berbeza ikut jenis program
+      const namaProgramJemputan = getNamaProgram(slot)
+      const inviteTxt = namaProgramJemputan === "Kelas Muslimat" ? "Muslimat dijemput hadir"
+        : namaProgramJemputan === "Tazkirah Jumaat" ? "Muslimin dijemput hadir"
+        : "Muslimin dan Muslimat dijemput hadir"
+      ctx.font = "italic 400 24px Lato"
+      const ipillW = ctx.measureText(inviteTxt).width + 56
+      const ipillH = 54
+      const ipillX = RCX - ipillW / 2
+      const inviteCenterY = lokasiY + 64
+      const ipillY = inviteCenterY - ipillH / 2
+      ctx.save()
+      ctx.fillStyle = "rgba(0,0,0,0.42)"
+      if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(ipillX, ipillY, ipillW, ipillH, ipillH / 2); ctx.fill() }
+      else ctx.fillRect(ipillX, ipillY, ipillW, ipillH)
+      ctx.strokeStyle = goldRgba(0.55); ctx.lineWidth = 1.5
+      if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(ipillX, ipillY, ipillW, ipillH, ipillH / 2); ctx.stroke() }
+      else ctx.strokeRect(ipillX, ipillY, ipillW, ipillH)
+      ctx.restore()
+      ctx.save()
+      ctx.shadowColor = "rgba(0,0,0,0.9)"; ctx.shadowBlur = 8; ctx.shadowOffsetY = 2
+      ctx.fillStyle = goldRgba(0.96); ctx.font = "italic 400 24px Lato"; ctx.textAlign = "center"
+      ctx.fillText(inviteTxt, RCX, inviteCenterY + 8)
+      ctx.restore()
+      const footerBottomY = ipillY + ipillH
 
       // Bottom ornament
       const bottomOrnY = Math.min(Math.max(footerBottomY + 40, H - 100), H - 52)
