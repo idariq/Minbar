@@ -1389,7 +1389,7 @@ export default function BiroPendidikan({ onKembali = () => {}, onSetBack }) {
         return lines
       }
       let nameLines = wrapName()
-      while ((nameLines.length > 2 || nameLines.some(l => ctx.measureText(l).width > maxSideNameW)) && snf > 20) { snf -= 2; nameLines = wrapName() }
+      while ((nameLines.length > 2 || nameLines.some(l => ctx.measureText(l).width > maxSideNameW)) && snf > 24) { snf -= 2; nameLines = wrapName() }
       let snY = labelY + 32 + snf
       nameLines.forEach((ln, i) => {
         ctx.save(); ctx.shadowColor = "rgba(0,0,0,0.9)"; ctx.shadowBlur = 12; ctx.shadowOffsetY = 2
@@ -1405,18 +1405,20 @@ export default function BiroPendidikan({ onKembali = () => {}, onSetBack }) {
       dmd(CX, colTop, 8, 0.55)
       dmd(CX, divBot, 8, 0.55)
 
-      // ── RIGHT: TAJUK label + topic + event details ──
+      // ── RIGHT: TAJUK label (majlis besar sahaja) + topic + event details ──
       const rightTop = colTop + 14
 
-      ctx.save()
-      ctx.shadowColor = "rgba(0,0,0,1)"; ctx.shadowBlur = 20; ctx.shadowOffsetY = 3
-      ctx.fillStyle = goldRgba(0.98); ctx.font = "700 26px Lato"; ctx.textAlign = "center"
-      ctx.fillText("— T A J U K —", RCX, rightTop + 22)
-      ctx.restore()
+      if (isMajlisBesar) {
+        ctx.save()
+        ctx.shadowColor = "rgba(0,0,0,1)"; ctx.shadowBlur = 20; ctx.shadowOffsetY = 3
+        ctx.fillStyle = goldRgba(0.98); ctx.font = "700 26px Lato"; ctx.textAlign = "center"
+        ctx.fillText("— T A J U K —", RCX, rightTop + 22)
+        ctx.restore()
+      }
 
       // Topic lines — re-wrap for narrower right column
       const maxRTopW = W / 2 - 76
-      let rtf = 48
+      let rtf = isMajlisBesar ? 48 : 54
       let rTopLines = []
       if (topikStr) {
         const buildRL = () => {
@@ -1427,10 +1429,12 @@ export default function BiroPendidikan({ onKembali = () => {}, onSetBack }) {
             if (ctx.measureText(t2).width > maxRTopW) { rll.push(rl); rl = w } else rl = t2
           }
           if (rl) rll.push(rl)
-          return rll.slice(0, 3)
+          return rll
         }
         rTopLines = buildRL()
-        while (rtf > 28 && rTopLines.some(l => ctx.measureText(l).width > maxRTopW)) { rtf -= 4; rTopLines = buildRL() }
+        // Kecutkan fon dahulu supaya muat dalam 3 baris — jangan potong perkataan tajuk secara senyap
+        while (rtf > 32 && rTopLines.length > 3) { rtf -= 2; rTopLines = buildRL() }
+        if (rTopLines.length > 3) rTopLines = rTopLines.slice(0, 3)
       }
       let rkf = Math.min(kf, 30), rKitabLines = []
       if (hasKitab) {
@@ -1445,11 +1449,11 @@ export default function BiroPendidikan({ onKembali = () => {}, onSetBack }) {
           return rll.slice(0, 2)
         }
         rKitabLines = buildRKL()
-        while (rkf > 18 && rKitabLines.some(l => ctx.measureText(l).width > maxRTopW)) { rkf -= 2; rKitabLines = buildRKL() }
+        while (rkf > 22 && rKitabLines.some(l => ctx.measureText(l).width > maxRTopW)) { rkf -= 2; rKitabLines = buildRKL() }
       }
       const rKitabLineH = rkf + 6
 
-      let rtY = rightTop + 22 + 28
+      let rtY = isMajlisBesar ? (rightTop + 22 + 28) : (rightTop + 10)
       if (rTopLines.length > 0) {
         const rGap = rtf + 10
         ctx.save()
@@ -1488,7 +1492,7 @@ export default function BiroPendidikan({ onKembali = () => {}, onSetBack }) {
       const tarikhMaxW = rPanelW - 150
       let tdf = 42
       ctx.font = `700 ${tdf}px 'Playfair Display'`
-      while (tdf > 26 && ctx.measureText(tarikhStr).width > tarikhMaxW) { tdf -= 2; ctx.font = `700 ${tdf}px 'Playfair Display'` }
+      while (tdf > 30 && ctx.measureText(tarikhStr).width > tarikhMaxW) { tdf -= 2; ctx.font = `700 ${tdf}px 'Playfair Display'` }
 
       // Masa — wrap to 2 balanced lines if the text is long
       const masaFont = mbd?.masa ? "400 32px Lato" : "400 34px Lato"
