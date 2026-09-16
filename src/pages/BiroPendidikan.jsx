@@ -6,7 +6,7 @@ import {
   ChevronDown, ChevronRight, Printer, Plus, Trash2,
   Users, Calendar, X, Check, MoreVertical, Download,
   BookOpen, ArrowLeft, Zap, FileText, Wallet, Star,
-  LayoutList, RotateCcw, Upload, LogOut, Eye, EyeOff, Settings
+  LayoutList, RotateCcw, Upload, LogOut, Eye, EyeOff, Settings, LayoutGrid
 } from "lucide-react"
 import LaporanBendahari from "./LaporanBendahari.jsx"
 
@@ -467,7 +467,7 @@ function janaJadualDariTemplate(yyyymm) {
   }
 }
 
-export default function BiroPendidikan({ onKembali = () => {}, onSetBack }) {
+export default function BiroPendidikan({ onKembali = () => {}, onSetBack, onTukarModul }) {
   const { C } = useTheme()
   const statusWarna = { "Hadir": C.green, "Ganti": C.primary, "Tangguh": C.warning, "": C.txtMuted }
   const waktuWarna = { Subuh: C.blueLt, Duha: C.warningLt, Asar: "#fff7ed", Jumaat: C.greenLt, Maghrib: C.dangerLt, Isyak: C.purpleLt }
@@ -3082,6 +3082,11 @@ export default function BiroPendidikan({ onKembali = () => {}, onSetBack }) {
           <div style={{ fontWeight: "700", fontSize: 16, color: "white" }}>Biro Pendidikan</div>
           <div style={{ fontSize: 10, color: C.gold, letterSpacing: 0.5 }}>Masjid Parit Setongkat</div>
         </div>
+        {onTukarModul && (
+          <button onClick={onTukarModul} title="Tukar Modul" style={{ background: "none", border: "none", cursor: "pointer", padding: "8px 10px", display: "flex", alignItems: "center", color: "white" }}>
+            <LayoutGrid size={19} />
+          </button>
+        )}
         <button onClick={() => setModalLogKeluar(true)} style={{ background: "none", border: "none", cursor: "pointer", padding: "8px 10px", display: "flex", alignItems: "center", color: "white" }}>
           <LogOut size={20} />
         </button>
