@@ -1550,8 +1550,12 @@ export default function BiroPendidikan({ onKembali = () => {}, onSetBack, onTuka
       if (masaLines.length > 1) iconTextRows(clockIcon, 35, masaLines, RCX, masaY, masaFont, "rgba(255,255,255,0.88)", masaLineH)
       else withIcon(clockIcon, 35, masaLines[0], RCX, masaY, masaFont, "rgba(255,255,255,0.88)")
       if (adaTasbih) {
-        ctx.fillStyle = goldRgba(0.92); ctx.font = "italic 700 24px Lato"; ctx.textAlign = "center"
-        ctx.fillText("✦ Didahului Solat Sunat Tasbih ✦", RCX, tasbihY)
+        const tasbihTxt = "✦ Didahului Solat Sunat Tasbih ✦"
+        let tsf = 30
+        ctx.font = `700 ${tsf}px Lato`
+        while (tsf > 20 && ctx.measureText(tasbihTxt).width > rPanelW - 40) { tsf -= 2; ctx.font = `700 ${tsf}px Lato` }
+        ctx.fillStyle = goldRgba(0.96); ctx.textAlign = "center"
+        ctx.fillText(tasbihTxt, RCX, tasbihY)
       }
       withIcon(pinIcon, 32, data?.masjid || "Masjid Parit Setongkat", RCX, lokasiY, "700 32px Lato", goldRgba(0.98))
       ctx.restore()
