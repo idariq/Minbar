@@ -85,6 +85,42 @@ function kitabTeks(item) {
   const arr = Array.isArray(item?.kitab) ? item.kitab : (item?.kitab ? [item.kitab] : [])
   return arr.filter(Boolean).join(" & ")
 }
+
+// Fon web yang dikongsi semua penjana poster/kad canvas (Kuliah, Kad Penceramah,
+// Jadual WA). Dimuat sekali sahaja setiap sesi (promise dicache) supaya setiap
+// penjana tunggu gaya/berat fon yang SAMA sebelum lukis teks — fon yang tak
+// dimuat sebelum lukis akan senyap-senyap fallback ke fon sistem lalai, punca
+// biasa poster nampak guna 2 jenis tulisan berbeza antara satu jana ke jana lain.
+let _fontPosterPromise = null
+function pastikanFontPoster() {
+  if (!_fontPosterPromise) {
+    _fontPosterPromise = (async () => {
+      if (!document.getElementById("_gf_poster")) {
+        const lnk = document.createElement("link")
+        lnk.id = "_gf_poster"
+        lnk.rel = "stylesheet"
+        lnk.href = "https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Great+Vibes&family=Lato:ital,wght@0,300;0,400;0,700;1,400;1,700&family=Amiri&display=swap"
+        document.head.appendChild(lnk)
+        await new Promise(r => setTimeout(r, 900))
+      }
+      await Promise.allSettled([
+        document.fonts.load("300 16px Lato"),
+        document.fonts.load("400 16px Lato"),
+        document.fonts.load("600 16px Lato"),
+        document.fonts.load("700 16px Lato"),
+        document.fonts.load("900 16px Lato"),
+        document.fonts.load("italic 400 16px Lato"),
+        document.fonts.load("italic 700 16px Lato"),
+        document.fonts.load("700 16px 'Playfair Display'"),
+        document.fonts.load("900 16px 'Playfair Display'"),
+        document.fonts.load("italic 700 16px 'Playfair Display'"),
+        document.fonts.load("16px 'Great Vibes'"),
+        document.fonts.load("16px Amiri"),
+      ])
+    })()
+  }
+  return _fontPosterPromise
+}
 const STATUS_OPTS = ["", "Hadir", "Ganti", "Tangguh"]
 const WAKTU_OPTS = ["Subuh", "Duha", "Asar", "Jumaat", "Maghrib", "Isyak"]
 const WAKTU_MASA_DEFAULT = { Subuh: "Selepas Solat Subuh", Duha: "9.00 pagi – 10.30 pagi", Asar: "Selepas Solat Asar", Maghrib: "Selepas Solat Maghrib", Isyak: "Selepas Solat Isyak", Jumaat: "12.30 tengah hari hingga masuk waktu Jumaat" }
@@ -922,21 +958,8 @@ export default function BiroPendidikan({ onKembali = () => {}, onSetBack, onTuka
     canvas.width = W; canvas.height = H
     const ctx = canvas.getContext("2d")
 
-    // ── Load Google Fonts (idempotent) ──
-    if (!document.getElementById("_gf_poster")) {
-      const lnk = document.createElement("link")
-      lnk.id = "_gf_poster"
-      lnk.rel = "stylesheet"
-      lnk.href = "https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Great+Vibes&family=Lato:ital,wght@0,300;0,400;0,700;1,400;1,700&family=Amiri&display=swap"
-      document.head.appendChild(lnk)
-      await new Promise(r => setTimeout(r, 900))
-    }
-    await Promise.allSettled([
-      document.fonts.load("900 16px 'Playfair Display'"),
-      document.fonts.load("16px 'Great Vibes'"),
-      document.fonts.load("700 16px Lato"),
-      document.fonts.load("16px Amiri"),
-    ])
+    // ── Load Google Fonts (dikongsi semua penjana poster — lihat pastikanFontPoster) ──
+    await pastikanFontPoster()
 
     // ── Load images ──
     const loadImg = url => new Promise(resolve => {
@@ -1619,11 +1642,7 @@ export default function BiroPendidikan({ onKembali = () => {}, onSetBack, onTuka
     const pObj = semPenceramah.find(p => p.nama === namaPenceramah)
     const gambarUrl = pObj?.gambar_url
 
-    await Promise.allSettled([
-      document.fonts.load("900 16px 'Playfair Display'"),
-      document.fonts.load("700 16px Lato"),
-      document.fonts.load("400 16px Lato"),
-    ])
+    await pastikanFontPoster()
     const loadImg = url => new Promise(res => {
       const img = new Image(); img.crossOrigin = "anonymous"
       img.onload = () => res(img); img.onerror = () => res(null); img.src = url
@@ -2755,13 +2774,7 @@ export default function BiroPendidikan({ onKembali = () => {}, onSetBack, onTuka
     if (!data || !bulanAktif || waLoading) return
     setWaLoading(true)
     try {
-      await Promise.allSettled([
-        document.fonts.load("900 16px Lato"),
-        document.fonts.load("700 16px Lato"),
-        document.fonts.load("600 16px Lato"),
-        document.fonts.load("400 16px Lato"),
-        document.fonts.load("italic 400 16px Lato"),
-      ])
+      await pastikanFontPoster()
       const loadImg = url => new Promise(res => {
         const img = new Image(); img.crossOrigin = "anonymous"
         img.onload = () => res(img); img.onerror = () => res(null); img.src = url
