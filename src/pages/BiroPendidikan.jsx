@@ -124,6 +124,19 @@ function pastikanFontPoster() {
 const STATUS_OPTS = ["", "Hadir", "Ganti", "Tangguh"]
 const WAKTU_OPTS = ["Subuh", "Duha", "Asar", "Jumaat", "Maghrib", "Isyak"]
 const WAKTU_MASA_DEFAULT = { Subuh: "Selepas Solat Subuh", Duha: "9.00 pagi – 10.30 pagi", Asar: "Selepas Solat Asar", Maghrib: "Selepas Solat Maghrib", Isyak: "Selepas Solat Isyak", Jumaat: "12.30 tengah hari hingga masuk waktu Jumaat" }
+// Sesetengah program ada masa tersendiri yang lari daripada masa lalai waktu
+// (cth kelas Khujakan/Jenazah/Tahsin pada Duha tak ikut jam kuliah Duha biasa).
+// Dipadankan ikut nama topik pengisian (bahagian sebelum " – ").
+const PROGRAM_MASA_DEFAULT = {
+  "Wirid Khujakan": "8.45 pagi – 10.00 pagi",
+  "Pengurusan Jenazah": "9.30 pagi – 12.00 tengah hari",
+  "Tahsin Al-Quran": "9.00 pagi – 11.00 pagi",
+}
+function programTopikDariPengisian(pengisian) {
+  if (!pengisian) return ""
+  const i = pengisian.indexOf(" – ")
+  return (i >= 0 ? pengisian.slice(0, i) : pengisian).trim()
+}
 const PROGRAM_OPTS = [
   "Kuliah Subuh","Kuliah Duha","Kuliah Asar","Kuliah Maghrib","Kuliah Isyak",
   "Tazkirah Jumaat","Kelas Muslimat","Majlis Zikir","Kelas Pegawai",
@@ -555,6 +568,11 @@ export default function BiroPendidikan({ onKembali = () => {}, onSetBack, onTuka
     try { const s = localStorage.getItem("alc_biro_masa_waktu"); return { ...WAKTU_MASA_DEFAULT, ...(s ? JSON.parse(s) : {}) } }
     catch { return { ...WAKTU_MASA_DEFAULT } }
   })
+  const [masaProgram, setMasaProgram] = useState(() => {
+    try { const s = localStorage.getItem("alc_biro_masa_program"); return { ...PROGRAM_MASA_DEFAULT, ...(s ? JSON.parse(s) : {}) } }
+    catch { return { ...PROGRAM_MASA_DEFAULT } }
+  })
+  const [programBaruNama, setProgramBaruNama] = useState("")
   const [modalTetapanMasa, setModalTetapanMasa] = useState(false)
   const [copiedSlotId, setCopiedSlotId] = useState(null)
   const [gambarUploadLoading, setGambarUploadLoading] = useState(null)
@@ -725,6 +743,34 @@ export default function BiroPendidikan({ onKembali = () => {}, onSetBack, onTuka
     })
   }
 
+  function kemasMasaProgram(nama, val) {
+    setMasaProgram(prev => {
+      const next = { ...prev, [nama]: val }
+      try { localStorage.setItem("alc_biro_masa_program", JSON.stringify(next)) } catch {}
+      return next
+    })
+  }
+  function buangMasaProgram(nama) {
+    setMasaProgram(prev => {
+      const next = { ...prev }; delete next[nama]
+      try { localStorage.setItem("alc_biro_masa_program", JSON.stringify(next)) } catch {}
+      return next
+    })
+  }
+  function tambahMasaProgram() {
+    const nama = programBaruNama.trim()
+    if (!nama || masaProgram[nama] != null) return
+    kemasMasaProgram(nama, "")
+    setProgramBaruNama("")
+  }
+
+  function getMasaSlot(slot) {
+    if (slot.masaKustom) return slot.masaKustom
+    const topik = programTopikDariPengisian(getPengisian(slot))
+    if (topik && masaProgram[topik]) return masaProgram[topik]
+    return masaWaktu[slot.waktu] || ""
+  }
+
   function autoAnjakan() {
     kemas(d => {
       const _pbA = pecahBaki(d.bakiLalu)
@@ -817,7 +863,7 @@ export default function BiroPendidikan({ onKembali = () => {}, onSetBack, onTuka
     const hari = slot.hari || ""
     const waktu = slot.waktu || ""
     const mingguKe = dt ? Math.ceil(dt.getDate() / 7) : 1
-    const masa = slot.masaKustom || masaWaktu[waktu] || ""
+    const masa = getMasaSlot(slot)
     const salam = "السَّلَامُ عَلَيْكُمْ وَرَحْمَةُ اللّٰهِ وَبَرَكَاتُهُ\n\n"
 
     if (slot.jenisProgram === "Kelas Muslimat") return `${salam}👩 *KELAS MUSLIMAT*\n\n🗓 *${hari} | ${tarikhStr}*\n⏰ \`${masa}\`\n📍 *${masjid}*\n\n🎙 *Pengajar:*\n${prefix}${penceramah}\n\n📖 *Pengisian:*\n${pengisian}\n\n✨ Muslimat dijemput hadir bersama-sama mengimarahkan majlis ilmu 🤲`
@@ -1076,7 +1122,7 @@ export default function BiroPendidikan({ onKembali = () => {}, onSetBack, onTuka
     const iso = tarikhKeISO(slot.tarikh, bulanAktif?.bulan)
     const dt = iso ? new Date(iso + "T00:00:00") : null
     const tarikhStr = dt ? `${slot.hari||""}, ${dt.getDate()} ${BLN[dt.getMonth()]} ${dt.getFullYear()}` : (slot.tarikh || "")
-    const masaStr = slotMbd?.masa || slot.masaKustom || masaWaktu[slot.waktu] || ""
+    const masaStr = slotMbd?.masa || getMasaSlot(slot)
 
     // ── Helpers ──
     const dmd = (x, y, s, al = 1) => {
@@ -1907,7 +1953,7 @@ export default function BiroPendidikan({ onKembali = () => {}, onSetBack, onTuka
       }
 
       // Waktu — bottom left, soft gold
-      const waktuLabel = s.masaKustom || masaWaktu[s.waktu] || s.waktu || ""
+      const waktuLabel = getMasaSlot(s) || s.waktu || ""
       if (waktuLabel) {
         let wf = 16; ctx.font = `400 ${wf}px Lato`
         while (ctx.measureText(waktuLabel).width > cardW - 32 && wf > 12) { wf--; ctx.font = `400 ${wf}px Lato` }
@@ -3757,7 +3803,7 @@ export default function BiroPendidikan({ onKembali = () => {}, onSetBack, onTuka
                             </div>
                             <div>
                               <div style={{ fontSize: 10, color: C.txtMuted, marginBottom: 3 }}>Masa (pilihan — kosongkan untuk guna tetapan lalai {slot.waktu})</div>
-                              <input value={slot.masaKustom || ""} onChange={e => kemasSlot(mIdx, slot.id, "masaKustom", e.target.value)} placeholder={masaWaktu[slot.waktu] || ""} style={inp} />
+                              <input value={slot.masaKustom || ""} onChange={e => kemasSlot(mIdx, slot.id, "masaKustom", e.target.value)} placeholder={getMasaSlot({ ...slot, masaKustom: "" })} style={inp} />
                             </div>
                             <div>
                               <div style={{ fontSize: 10, color: C.txtMuted, marginBottom: 3 }}>Penceramah</div>
@@ -4255,6 +4301,31 @@ export default function BiroPendidikan({ onKembali = () => {}, onSetBack, onTuka
                 </div>
               ))}
               <button onClick={() => { setMasaWaktu({ ...WAKTU_MASA_DEFAULT }); try { localStorage.removeItem("alc_biro_masa_waktu") } catch {} }} style={{ width: "100%", padding: "9px", borderRadius: 8, border: `1px solid ${C.border}`, background: "none", color: C.txtMuted, cursor: "pointer", fontSize: 12, fontWeight: "600", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                <RotateCcw size={13} /> Set semula ke lalai
+              </button>
+
+              <div style={{ height: 1, background: C.border, margin: "20px 0 16px" }} />
+              <div style={{ fontWeight: "800", fontSize: 14, color: C.txt, marginBottom: 6 }}>Tetapan Masa Program</div>
+              <div style={{ fontSize: 12, color: C.txtMuted, marginBottom: 14 }}>
+                Sesetengah program (cth Khujakan, Kelas Jenazah, Tahsin) ada masa tersendiri yang lari daripada masa lalai waktu di atas. Dipadankan ikut nama topik pengisian — kosongkan untuk guna masa lalai waktu.
+              </div>
+              {Object.keys(masaProgram).map(nama => (
+                <div key={nama} style={{ marginBottom: 12 }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 3 }}>
+                    <div style={{ fontSize: 10, color: C.txtMuted }}>{nama}</div>
+                    {!(nama in PROGRAM_MASA_DEFAULT) && (
+                      <button onClick={() => buangMasaProgram(nama)} style={{ background: "none", border: "none", cursor: "pointer", padding: 2, color: C.danger }}><X size={13} /></button>
+                    )}
+                  </div>
+                  <input value={masaProgram[nama] ?? ""} onChange={e => kemasMasaProgram(nama, e.target.value)} placeholder={PROGRAM_MASA_DEFAULT[nama] || ""} style={inp} />
+                </div>
+              ))}
+              <datalist id="biro-masa-program-cadangan">{PENGISIAN_JENIS.map(p => <option key={p} value={p} />)}</datalist>
+              <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+                <input value={programBaruNama} onChange={e => setProgramBaruNama(e.target.value)} placeholder="Nama topik pengisian (cth: Tajwid & Tafsir)" list="biro-masa-program-cadangan" onKeyDown={e => e.key === "Enter" && tambahMasaProgram()} style={{ ...inp, flex: 1 }} />
+                <button onClick={tambahMasaProgram} style={{ padding: "6px 14px", borderRadius: 8, border: "none", background: C.navy, color: "white", cursor: "pointer", fontWeight: "700", fontSize: 13, whiteSpace: "nowrap" }}>+ Tambah</button>
+              </div>
+              <button onClick={() => { setMasaProgram({ ...PROGRAM_MASA_DEFAULT }); try { localStorage.removeItem("alc_biro_masa_program") } catch {} }} style={{ width: "100%", padding: "9px", borderRadius: 8, border: `1px solid ${C.border}`, background: "none", color: C.txtMuted, cursor: "pointer", fontSize: 12, fontWeight: "600", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
                 <RotateCcw size={13} /> Set semula ke lalai
               </button>
             </div>
